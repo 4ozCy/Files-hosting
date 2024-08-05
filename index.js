@@ -15,15 +15,13 @@ function generateRandomString(length) {
 }
 
 const storage = multer.diskStorage({
-    destination: './uploads',
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
+    destination: (req, file, cb) => {
+        cb(null, '.uploads/');
+    },
     filename: (req, file, cb) => {
         const randomString = generateRandomString(4);
         const extension = path.extname(file.originalname);
-        cb(null, `${randomString}${extension}`);
+        cb(null, `${randomString}${Date.now()}${extension}`);
     }
 });
 
