@@ -1,43 +1,46 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-
+const fs = require('fs');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
+
+function generateRandomString(length) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+}
 
 const storage = multer.diskStorage({
-    destination: './uploads',
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
     filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
+        const randomString = generateRandomString(4);
+        const extension = path.extname(file.originalname);
+        cb(null, `${randomString}${extension}`);
     }
 });
 
-const upload = multer({
-    storage: storage,
+const upload = multer({ 
+    storage,
     limits: { fileSize: 10 * 1024 * 1024 },
-}).single('file');
+});
 
 app.use(express.static('public'));
 
-app.post('/upload', (req, res) => {
-    upload(req, res, (err) => {
-        if (err) {
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).send('File is too large. Maximum size is 10MB.');
-            }
-            return res.status(500).send('File upload failed.');
-        }
-        if (!req.file) {
-            return res.status(400).send('No file uploaded.');
-        }
+app.post('/upload', upload.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('No file uploaded.');
+    }
 
-        const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-        res.send({ fileUrl });
-    });
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ fileUrl });
 });
-
-app.use('/uploads', express.static('uploads'));
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+    console.log(`Server is running on http://localhost:${PORT}`);
+})
