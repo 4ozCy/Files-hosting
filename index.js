@@ -1,10 +1,10 @@
-require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 const { MongoClient, GridFSBucket } = require('mongodb');
 const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
+require('dotenv').config();
 
 const client = new MongoClient(process.env.MONGODB_URL, {
     useNewUrlParser: true,
