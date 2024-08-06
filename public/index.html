@@ -135,7 +135,7 @@
     formData.append('file', fileInput.files[0]);
 
     try {
-        const response = await fetch('/.netlify/functions/file-upload', {
+        const response = await fetch('/file', {
             method: 'POST',
             body: formData
         });
