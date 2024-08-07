@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { MongoClient, GridFSBucket } = require('mongodb');
 const path = require('path');
+const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 require('dotenv').config();
@@ -29,32 +30,35 @@ function generateRandomString(length) {
     return result;
 }
 
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'temp-uploads');
+    },
+    filename: function (req, file, cb) {
+        cb(null, generateRandomString(6) + path.extname(file.originalname));
+    }
+});
 const upload = multer({
     storage: storage,
     limits: { fileSize: 150 * 1024 * 1024 },
-}).single('file');
+});
 
 app.use(express.static('public'));
 
-app.post('/file', (req, res) => {
-    upload(req, res, (err) => {
-        if (err) {
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).send('File is too large. Maximum size is 150MB.');
-            }
-            return res.status(500).send('File upload failed.');
-        }
-        if (!req.file) {
-            return res.status(400).send('No file uploaded.');
-        }
+app.post('/file', upload.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('No file uploaded.');
+    }
 
-        const filename = `${generateRandomString(6)}${path.extname(req.file.originalname)}`;
-        const uploadStream = bucket.openUploadStream(filename);
-        uploadStream.end(req.file.buffer, () => {
-            const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
-            res.send({ fileUrl });
-        });
+    const filename = req.file.filename;
+    const uploadStream = bucket.openUploadStream(filename);
+
+    fs.createReadStream(`temp-uploads/${filename}`).pipe(uploadStream).on('finish', () => {
+        fs.unlinkSync(`temp-uploads/${filename}`);
+        const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
+        res.send({ fileUrl });
+    }).on('error', () => {
+        res.status(500).send('File upload failed.');
     });
 });
 
