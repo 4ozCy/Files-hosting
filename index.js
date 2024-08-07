@@ -49,7 +49,7 @@ app.post('/file', (req, res) => {
             return res.status(400).send('No file uploaded.');
         }
 
-        const filename = `${generateRandomString(4)}${path.extname(req.file.originalname)}`;
+        const filename = `${generateRandomString(6)}${path.extname(req.file.originalname)}`;
         const uploadStream = bucket.openUploadStream(filename);
         uploadStream.end(req.file.buffer, () => {
             const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
