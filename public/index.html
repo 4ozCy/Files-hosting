@@ -172,7 +172,7 @@
             }
         });
 
-        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
@@ -180,24 +180,34 @@
             progressBar.style.display = 'block';
             uploadButton.disabled = true;
 
-            try {
-                const response = await fetch('/file', {
-                    method: 'POST',
-                    body: formData,
-                    onUploadProgress: function(progressEvent) {
-                        let percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                        progressBarFill.style.width = percentCompleted + '%';
-                    }
-                });
-                const result = await response.json();
-                document.getElementById('result').innerHTML = `File uploaded: <a href="${result.fileUrl}">${result.fileUrl}</a>`;
-            } catch (err) {
-                console.error('Error uploading file:', err);
-                document.getElementById('result').textContent = 'Failed to upload file.';
-            } finally {
+            const xhr = new XMLHttpRequest();
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    progressBarFill.style.width = `${percentComplete}%`;
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    document.getElementById('result').innerHTML = `File uploaded: <a href="${response.fileUrl}">${response.fileUrl}</a>`;
+                } else {
+                    document.getElementById('result').textContent = 'Failed to upload file.';
+                }
                 progressBar.style.display = 'none';
                 uploadButton.disabled = false;
-            }
+            });
+
+            xhr.addEventListener('error', () => {
+                document.getElementById('result').textContent = 'Failed to upload file.';
+                progressBar.style.display = 'none';
+                uploadButton.disabled = false;
+            });
+
+            xhr.open('POST', '/file');
+            xhr.send(formData);
         });
     </script>
 </body>
