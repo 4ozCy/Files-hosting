@@ -179,103 +179,117 @@
 
     <script>
         const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const uploadButton = document.getElementById('uploadButton');
-        const progressBar = document.getElementById('progressBar');
-        const progressBarFill = document.getElementById('progressBarFill');
-        const result = document.getElementById('result');
+const fileInput = document.getElementById('fileInput');
+const uploadButton = document.getElementById('uploadButton');
+const progressBar = document.getElementById('progressBar');
+const progressBarFill = document.getElementById('progressBarFill');
+const result = document.getElementById('result');
 
-        function updateDropZoneText(fileName) {
-            dropZone.textContent = `Selected file: ${fileName}`;
-            uploadButton.style.display = 'block';
+function updateDropZoneText(fileName) {
+    dropZone.textContent = `Selected file: ${fileName}`;
+    uploadButton.style.display = 'block';
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        updateDropZoneText(fileInput.files[0].name);
+    }
+});
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length > 0) {
+        updateDropZoneText(fileInput.files[0].name);
+    }
+});
+
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    progressBar.style.display = 'block';
+    uploadButton.disabled = true;
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            progressBarFill.style.width = `${percentComplete}%`;
         }
+    });
 
-        dropZone.addEventListener('click', () => fileInput.click());
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                updateDropZoneText(fileInput.files[0].name);
-            }
-        });
-
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length > 0) {
-                updateDropZoneText(fileInput.files[0].name);
-            }
-        });
-
-        document.getElementById('uploadForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            progressBar.style.display = 'block';
-            uploadButton.disabled = true;
-
-            const xhr = new XMLHttpRequest();
-
-            xhr.upload.addEventListener('progress', (e) => {
-                if (e.lengthComputable) {
-                    const percentComplete = (e.loaded / e.total) * 100;
-                    progressBarFill.style.width = `${percentComplete}%`;
-                }
-            });
-
-            xhr.addEventListener('load', () => {
-                if (xhr.status === 200) {
-                    const response = JSON.parse(xhr.responseText);
-                    displayResult(response.fileUrl);
-                } else {
-                    result.textContent = 'Failed to upload file.';
-                }
-                progressBar.style.display = 'none';
-                uploadButton.disabled = false;
-            });
-
-            xhr.addEventListener('error', () => {
-                result.textContent = 'Failed to upload file.';
-                progressBar.style.display = 'none';
-                uploadButton.disabled = false;
-            });
-
-            xhr.open('POST', '/file');
-            xhr.send(formData);
-        });
-
-        function displayResult(fileUrl) {
-            result.innerHTML = `
-                <div class="link-box">
-                    <p id="fileLink">${fileUrl}</p>
-                    <button onclick="copyToClipboard()">Copy Link</button>
-                    <button class="direct-link" onclick="openLink('${fileUrl}')">Open File</button>
-                </div>
-            `;
+    xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+            displayResult(response.fileUrl);
+        } else {
+            result.textContent = 'Failed to upload file.';
         }
+        progressBar.style.display = 'none';
+        uploadButton.disabled = false;
+    });
 
-        function copyToClipboard() {
-            const fileLink = document.getElementById('fileLink').textContent;
-            navigator.clipboard.writeText(fileLink).then(() => {
-                alert('Link copied to clipboard!');
-            }).catch(err => {
-                console.error('Failed to copy: ', err);
-            });
-        }
+    xhr.addEventListener('error', () => {
+        result.textContent = 'Failed to upload file.';
+        progressBar.style.display = 'none';
+        uploadButton.disabled = false;
+    });
 
-        function openLink(url) {
-            window.open(url, '_blank');
-        }
+    xhr.open('POST', '/file');
+    xhr.send(formData);
+});
+
+function displayResult(fileUrl) {
+    const linkBox = document.createElement('div');
+    linkBox.classList.add('link-box');
+
+    const fileLink = document.createElement('p');
+    fileLink.id = 'fileLink';
+    fileLink.textContent = fileUrl;
+
+    const copyButton = document.createElement('button');
+    copyButton.textContent = 'Copy Link';
+    copyButton.addEventListener('click', () => {
+        copyToClipboard(fileUrl);
+    });
+	
+    const directLinkButton = document.createElement('button');
+    directLinkButton.textContent = 'Open File';
+    directLinkButton.classList.add('direct-link');
+    directLinkButton.addEventListener('click', () => {
+        window.open(fileUrl, '_blank');
+    }};
+	    
+    linkBox.appendChild(fileLink);
+    linkBox.appendChild(copyButton);
+    linkBox.appendChild(directLinkButton);
+
+    result.innerHTML = '';
+    result.appendChild(linkBox);
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Link copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+    });
+	    }
     </script>
 </body>
 </html>
