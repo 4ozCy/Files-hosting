@@ -132,24 +132,16 @@
             word-break: break-all;
         }
 
-        .link-box button {
+        .direct-link {
             margin-top: 10px;
             padding: 10px 20px;
-            background-color: #28a745;
+            background-color: #17a2b8;
             color: #fff;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-size: 14px;
             transition: background-color 0.3s;
-        }
-
-        .link-box button:hover {
-            background-color: #218838;
-        }
-
-        .direct-link {
-            background-color: #17a2b8;
         }
 
         .direct-link:hover {
@@ -172,7 +164,6 @@
         <div id="result">
             <div class="link-box" id="linkBox">
                 <p id="fileLink"></p>
-                <button id="copyButton">Copy Link</button>
                 <button id="openButton" class="direct-link">Open File</button>
             </div>
         </div>
@@ -187,7 +178,6 @@
         const result = document.getElementById('result');
         const linkBox = document.getElementById('linkBox');
         const fileLink = document.getElementById('fileLink');
-        const copyButton = document.getElementById('copyButton');
         const openButton = document.getElementById('openButton');
 
         function updateDropZoneText(fileName) {
@@ -242,6 +232,7 @@
                 if (xhr.status === 200) {
                     const response = JSON.parse(xhr.responseText);
                     displayResult(response.fileUrl);
+                    copyToClipboard(response.fileUrl);
                 } else {
                     result.textContent = 'Failed to upload file.';
                 }
@@ -263,7 +254,6 @@
             fileLink.textContent = fileUrl;
             linkBox.style.display = 'flex';
 
-            copyButton.onclick = () => copyToClipboard(fileUrl);
             openButton.onclick = () => window.open(fileUrl, '_blank');
         }
 
