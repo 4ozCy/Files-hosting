@@ -3,6 +3,7 @@ const express = require('express');
 const multer = require('multer');
 const { MongoClient, GridFSBucket } = require('mongodb');
 const path = require('path');
+const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -18,21 +19,31 @@ client.connect().then(() => {
     bucket = new GridFSBucket(db, {
         bucketName: 'uploads'
     });
+}).catch(err => {
+    console.error('Failed to connect to MongoDB', err);
+    process.exit(1);
 });
 
 function generateRandomString(length) {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-        result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
+    return crypto.randomBytes(length).toString('hex').slice(0, length);
 }
 
 const storage = multer.memoryStorage();
+
 const upload = multer({
     storage: storage,
     limits: { fileSize: 150 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|pdf|docx|txt|mp4|avi|mkv|zip|rar/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+
+        if (extname && mimetype) {
+            return cb(null, true);
+        } else {
+            cb(new Error('File type not allowed. Only images, documents, videos, and archives are allowed.'));
+        }
+    }
 }).single('file');
 
 app.use(express.static('public'));
@@ -42,6 +53,8 @@ app.post('/file', (req, res) => {
         if (err) {
             if (err.code === 'LIMIT_FILE_SIZE') {
                 return res.status(400).send('File is too large. Maximum size is 150MB.');
+            } else if (err.message === 'File type not allowed. Only images, documents, videos, and archives are allowed.') {
+                return res.status(400).send(err.message);
             }
             return res.status(500).send('File upload failed.');
         }
@@ -55,6 +68,10 @@ app.post('/file', (req, res) => {
             const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
             res.send({ fileUrl });
         });
+
+        uploadStream.on('error', () => {
+            res.status(500).send('File upload failed.');
+        });
     });
 });
 
@@ -62,6 +79,10 @@ app.get('/file/:filename', (req, res) => {
     const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
     downloadStream.pipe(res).on('error', () => {
         res.status(404).send('File not found');
+    });
+    downloadStream.on('error', (err) => {
+        console.error('Error streaming file:', err);
+        res.status(500).send('Error retrieving file.');
     });
 });
 
