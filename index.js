@@ -32,7 +32,7 @@ const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 150 * 1024 * 1024 },
+    limits: { fileSize: 1000 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif|pdf|docx|txt|mp4|avi|mkv|zip|rar/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -52,7 +52,7 @@ app.post('/file', (req, res) => {
     upload(req, res, (err) => {
         if (err) {
             if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).send('File is too large. Maximum size is 150MB.');
+                return res.status(400).send('File is too large. Maximum size is 1GB.');
             } else if (err.message === 'File type not allowed. Only images, documents, videos, and archives are allowed.') {
                 return res.status(400).send(err.message);
             }
@@ -71,6 +71,33 @@ app.post('/file', (req, res) => {
 
         uploadStream.on('error', () => {
             res.status(500).send('File upload failed.');
+        });
+    });
+});
+
+app.post('/api/file/hosting', (req, res) => {
+    upload(req, res, (err) => {
+        if (err) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ error: 'File is too large. Maximum size is 150MB.' });
+            } else if (err.message === 'File type not allowed. Only images, documents, videos, and archives are allowed.') {
+                return res.status(400).json({ error: err.message });
+            }
+            return res.status(500).json({ error: 'File upload failed.' });
+        }
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded.' });
+        }
+
+        const filename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
+        const uploadStream = bucket.openUploadStream(filename);
+        uploadStream.end(req.file.buffer, () => {
+            const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
+            res.json({ fileUrl });
+        });
+
+        uploadStream.on('error', () => {
+            res.status(500).json({ error: 'File upload failed.' });
         });
     });
 });
