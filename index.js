@@ -48,6 +48,10 @@ const upload = multer({
 
 app.use(express.static('public'));
 
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.post('/file', (req, res) => {
     upload(req, res, (err) => {
         if (err) {
@@ -79,7 +83,7 @@ app.post('/api/file/hosting', (req, res) => {
     upload(req, res, (err) => {
         if (err) {
             if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).json({ error: 'File is too large. Maximum size is 150MB.' });
+                return res.status(400).json({ error: 'File is too large. Maximum size is 1GB.' });
             } else if (err.message === 'File type not allowed. Only images, documents, videos, and archives are allowed.') {
                 return res.status(400).json({ error: err.message });
             }
