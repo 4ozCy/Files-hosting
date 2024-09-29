@@ -4,6 +4,7 @@ const multer = require('multer');
 const { MongoClient, GridFSBucket } = require('mongodb');
 const path = require('path');
 const crypto = require('crypto');
+const favicon = require('serve-favicon');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -47,6 +48,8 @@ const upload = multer({
 }).single('file');
 
 app.use(express.static('public'));
+
+app.use(favicon(path.join(__dirname, 'favicon.ico')));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
