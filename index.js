@@ -6,6 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const favicon = require('serve-favicon');
 const cors = require('cors');
+import { inject } from "@vercel/analytics"
 const app = express();
 const PORT = process.env.PORT || 3000;
 
