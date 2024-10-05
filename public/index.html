@@ -3,156 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Hosting</title>
+    <title>files box</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
 
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #121212;
-            padding: 20px;
-            height: 100vh;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            color: #fff;
-        }
+body {
+    font-family: 'Patrick Hand', cursive;
+    background-color: #121212;
+    padding: 20px;
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: #fff;
+}
 
-        .background-animation {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            z-index: -1;
-            background: linear-gradient(45deg, #007bff, #121212);
-            background-size: 400% 400%;
-            animation: gradient 15s ease infinite;
-        }
+.background-animation {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    background: linear-gradient(45deg, #007bff, #121212);
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+}
 
-        @keyframes gradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
+@keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
 
-        .container {
-            max-width: 600px;
-            width: 100%;
-            padding: 30px;
-            background-color: rgba(27, 27, 27, 0.9);
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
-            text-align: center;
-        }
+.header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
 
-        h1 {
-            color: #fff;
-            font-size: 28px;
-            margin-bottom: 20px;
-        }
+.header-icon {
+    width: 70px;
+    height: 70px;
+    margin-left: 1px;
+}
 
-        form {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+.container {
+    max-width: 400px;
+    width: 100%;
+    padding: 30px;
+    background-color: rgba(27, 27, 27, 0.9);
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+    text-align: center;
+}
 
-        input[type="file"] {
-            display: none;
-        }
+h1 {
+    color: #fff;
+    font-size: 28px;
+    margin-bottom: 20px;
+}
 
-        .drop-zone {
-            border: 2px dashed #007bff;
-            margin-top: 20px;
-            padding: 40px;
-            text-align: center;
-            color: #007bff;
-            cursor: pointer;
-            border-radius: 10px;
-            transition: background-color 0.3s, color 0.3s;
-        }
+.error-message {
+    color: red;
+    font-size: 16px;
+    display: none;
+    margin-top: 10px;
+}
 
-        .drop-zone.dragover {
-            background-color: #007bff;
-            color: #fff;
-        }
+form {
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+}
 
-        button {
-            padding: 12px 30px;
-            background-color: #007bff;
-            color: #fff;
-            margin-top: 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            display: none;
-            font-size: 16px;
-            transition: background-color 0.3s;
-        }
+input[type="file"] {
+      display: none;
+}
 
-        button:hover {
-            background-color: #0056b3;
-        }
+.drop-zone {
+    border: 2px dashed #007bff;
+    margin-top: 20px;
+    padding: 40px;
+    text-align: center;
+    color: #007bff;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: background-color 0.3s, color 0.3s;
+}
 
-        #progressBar {
-            width: 100%;
-            background-color: #1b1b1b;
-            border-radius: 5px;
-            overflow: hidden;
-            margin-top: 20px;
-            display: none;
-        }
+.drop-zone.dragover {
+    background-color: #007bff;
+    color: #fff;
+}
 
-        #progressBarFill {
-            height: 10px;
-            width: 0;
-            background-color: #007bff;
-            transition: width 0.4s ease;
-        }
+button {
+    padding: 12px 30px;
+    background-color: #007bff;
+    color: #fff;
+    margin-top: 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    display: none;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
 
-        /* Style for the result section, making sure the buttons only appear here */
-        .link-box {
-            background-color: #1b1b1b;
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 20px;
-            display: none; /* Hidden initially */
-            flex-direction: column;
-            align-items: center;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-        }
+button:hover {
+    background-color: #0056b3;
+}
 
-        .link-box p {
-            margin: 0;
-            font-size: 18px;
-            color: #fff;
-            word-break: break-all;
-        }
+#progressBar {
+    width: 100%;
+    background-color: #1b1b1b;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 20px;
+    display: none;
+}
 
-        .direct-link {
-            margin-top: 10px;
-            padding: 10px 20px;
-            background-color: #17a2b8;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        }
+#progressBarFill {
+    height: 10px;
+    width: 0;
+    background-color: #007bff;
+    transition: width 0.4s ease;
+}
 
-        .direct-link:hover {
-            background-color: #138496;
-        }
+.link-box {
+    background-color: #1b1b1b;
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+}
+
+.link-box p {
+    margin: 0;
+    font-size: 18px;
+    color: #fff;
+    word-break: break-all;
+}
+
+.direct-link {
+    margin-top: 10px;
+    padding: 10px 20px;
+    background-color: #17a2b8;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.direct-link:hover {
+    background-color: #138496;
+}
     </style>
 </head>
 <body>
     <div class="background-animation"></div>
+    <div class="header">
+        <h1>files Box</h1>
+        <img src="icon.png" alt="Icon" class="header-icon">
+    </div>
     <div class="container">
         <h1>Upload Your File (Max 1GB)</h1>
+        <div class="error-message" id="errorMessage">Invalid file format. Only images, documents, videos, and archives are allowed.</div>
         <form id="uploadForm" enctype="multipart/form-data">
             <input type="file" name="file" id="fileInput" required>
             <div class="drop-zone" id="dropZone">Drag & drop your file here or click to select</div>
@@ -169,16 +193,17 @@
         </div>
     </div>
 
+    
     <script>
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const uploadButton = document.getElementById('uploadButton');
         const progressBar = document.getElementById('progressBar');
         const progressBarFill = document.getElementById('progressBarFill');
-        const result = document.getElementById('result');
         const linkBox = document.getElementById('linkBox');
         const fileLink = document.getElementById('fileLink');
         const openButton = document.getElementById('openButton');
+        const errorMessage = document.getElementById('errorMessage');
 
         function updateDropZoneText(fileName) {
             dropZone.textContent = `Selected file: ${fileName}`;
@@ -225,6 +250,7 @@
                 if (e.lengthComputable) {
                     const percentComplete = (e.loaded / e.total) * 100;
                     progressBarFill.style.width = `${percentComplete}%`;
+                    progressBarFill.textContent = `${Math.round(percentComplete)}%`;
                 }
             });
 
@@ -232,16 +258,21 @@
                 if (xhr.status === 200) {
                     const response = JSON.parse(xhr.responseText);
                     displayResult(response.fileUrl);
-                    copyToClipboard(response.fileUrl);
+                } else if (xhr.status === 400 && xhr.responseText.includes('File type not allowed')) {
+                    showError('Invalid file format. Only images, documents, videos, and archives are allowed.');
                 } else {
-                    result.textContent = 'Failed to upload file.';
+                    showError('Failed to upload file.');
                 }
+                progressBarFill.textContent = '';
+                progressBarFill.style.width = '0%';
                 progressBar.style.display = 'none';
                 uploadButton.disabled = false;
             });
 
             xhr.addEventListener('error', () => {
-                result.textContent = 'Failed to upload file.';
+                showError('Failed to upload file.');
+                progressBarFill.textContent = '';
+                progressBarFill.style.width = '0%';
                 progressBar.style.display = 'none';
                 uploadButton.disabled = false;
             });
@@ -255,6 +286,11 @@
             linkBox.style.display = 'flex';
 
             openButton.onclick = () => window.open(fileUrl, '_blank');
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
         }
 
         function copyToClipboard(text) {
