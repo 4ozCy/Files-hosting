@@ -172,7 +172,7 @@ button:hover {
     <div class="background-animation"></div>
     <div class="header">
         <h1>files box</h1>
-        <img src="https://files.catbox.moe/4aqcpq.png" alt="Icon" class="header-icon">
+        <img src="icon.png" alt="Icon" class="header-icon">
     </div>
     <div class="container">
         <h1>Upload Your File (Max 1GB)</h1>
@@ -249,7 +249,7 @@ button:hover {
             xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable) {
                     const percentComplete = (e.loaded / e.total) * 100;
-                    progressBarFill.style.width = `${percentComplete}`;
+                    progressBarFill.style.width = `${percentComplete}%`;
                 }
             });
 
