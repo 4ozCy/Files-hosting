@@ -20,9 +20,5 @@
       "src": "/(.*)",
       "dest": "/index.js"
     }
-  ],
-  "env": {
-    "PORT": "3000",
-    "MONGODB_URL": "mongodb+srv://zcy:3309@cluster0.n3ojpqe.mongodb.net/?retryWrites=true&w=majority"
-  }
+  ]
 }
