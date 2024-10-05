@@ -200,10 +200,10 @@ button:hover {
         const uploadButton = document.getElementById('uploadButton');
         const progressBar = document.getElementById('progressBar');
         const progressBarFill = document.getElementById('progressBarFill');
+        const result = document.getElementById('result');
         const linkBox = document.getElementById('linkBox');
         const fileLink = document.getElementById('fileLink');
         const openButton = document.getElementById('openButton');
-        const errorMessage = document.getElementById('errorMessage');
 
         function updateDropZoneText(fileName) {
             dropZone.textContent = `Selected file: ${fileName}`;
@@ -249,8 +249,7 @@ button:hover {
             xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable) {
                     const percentComplete = (e.loaded / e.total) * 100;
-                    progressBarFill.style.width = `${percentComplete}%`;
-                    progressBarFill.textContent = `${Math.round(percentComplete)}%`;
+                    progressBarFill.style.width = `${percentComplete}`;
                 }
             });
 
@@ -258,21 +257,16 @@ button:hover {
                 if (xhr.status === 200) {
                     const response = JSON.parse(xhr.responseText);
                     displayResult(response.fileUrl);
-                } else if (xhr.status === 400 && xhr.responseText.includes('File type not allowed')) {
-                    showError('Invalid file format. Only images, documents, videos, and archives are allowed.');
+                    copyToClipboard(response.fileUrl);
                 } else {
-                    showError('Failed to upload file.');
+                    result.textContent = 'Failed to upload file.';
                 }
-                progressBarFill.textContent = '';
-                progressBarFill.style.width = '0%';
                 progressBar.style.display = 'none';
                 uploadButton.disabled = false;
             });
 
             xhr.addEventListener('error', () => {
-                showError('Failed to upload file.');
-                progressBarFill.textContent = '';
-                progressBarFill.style.width = '0%';
+                result.textContent = 'Failed to upload file.';
                 progressBar.style.display = 'none';
                 uploadButton.disabled = false;
             });
@@ -286,11 +280,6 @@ button:hover {
             linkBox.style.display = 'flex';
 
             openButton.onclick = () => window.open(fileUrl, '_blank');
-        }
-
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
         }
 
         function copyToClipboard(text) {
