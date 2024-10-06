@@ -6,11 +6,15 @@ const path = require('path');
 const crypto = require('crypto');
 const favicon = require('serve-favicon');
 const sharp = require('sharp');
-const gifsicle = require('gifsicle');
 const { execFile } = require('child_process');
 const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+let gifsicle;
+(async () => {
+    gifsicle = (await import('gifsicle')).default;
+})();
 
 const client = new MongoClient(process.env.MONGODB_URL, {
     useNewUrlParser: true,
