@@ -17,8 +17,10 @@ let bucket;
 
 client.connect().then(() => {
     const db = client.db();
-    bucket = new GridFSBucket(db, {
-        bucketName: 'uploads'
+    bucket = new GridFSBucket(db, { bucketName: 'uploads' });
+
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
     });
 }).catch(err => {
     console.error('Failed to connect to MongoDB', err);
@@ -48,7 +50,6 @@ const upload = multer({
 }).single('file');
 
 app.use(express.static('public'));
-
 app.use(favicon(path.join(__dirname, 'favicon.ico')));
 
 app.get('/', (req, res) => {
@@ -56,6 +57,10 @@ app.get('/', (req, res) => {
 });
 
 app.post('/file', (req, res) => {
+    if (!bucket) {
+        return res.status(500).send('Database not connected.');
+    }
+
     upload(req, res, (err) => {
         if (err) {
             if (err.code === 'LIMIT_FILE_SIZE') {
@@ -118,8 +123,4 @@ app.get('/file/:filename', (req, res) => {
         console.error('Error streaming file:', err);
         res.status(500).send('Error retrieving file.');
     });
-});
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
 });
