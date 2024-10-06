@@ -37,7 +37,7 @@ const upload = multer({
     storage: storage,
     limits: { fileSize: 1000 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png|gif|pdf|docx|txt|mp4|avi|mkv|zip|rar/;
+        const allowedTypes = /jpeg|jpg|png|gif|mp4|avi/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
         const mimetype = allowedTypes.test(file.mimetype);
 
