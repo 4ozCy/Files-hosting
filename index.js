@@ -5,7 +5,6 @@ const { MongoClient, GridFSBucket } = require('mongodb');
 const path = require('path');
 const crypto = require('crypto');
 const favicon = require('serve-favicon');
-const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -50,12 +49,6 @@ const upload = multer({
     }
 }).single('file');
 
-app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
 app.use(express.static('public'));
 app.use(favicon(path.join(__dirname, 'favicon.ico')));
 
@@ -95,27 +88,35 @@ app.post('/file', (req, res) => {
 });
 
 app.post('/api/file/host', (req, res) => {
+    if (!bucket) {
+        return res.status(500).json({ error: 'Database not connected.' });
+    }
+
     upload(req, res, (err) => {
         if (err) {
+            console.error('Error during file upload:', err.message);
             if (err.code === 'LIMIT_FILE_SIZE') {
                 return res.status(400).json({ error: 'File is too large. Maximum size is 1GB.' });
-            } else if (err.message === 'File type not allowed. Only images, documents, videos, and archives are allowed.') {
+            } else if (err.message === 'File type not allowed. Only images, videos are allowed.') {
                 return res.status(400).json({ error: err.message });
             }
             return res.status(500).json({ error: 'File upload failed.' });
         }
+
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded.' });
         }
 
         const filename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
         const uploadStream = bucket.openUploadStream(filename);
+
         uploadStream.end(req.file.buffer, () => {
             const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
             res.json({ fileUrl });
         });
 
-        uploadStream.on('error', () => {
+        uploadStream.on('error', (error) => {
+            console.error('Error uploading file:', error);
             res.status(500).json({ error: 'File upload failed.' });
         });
     });
@@ -123,11 +124,13 @@ app.post('/api/file/host', (req, res) => {
 
 app.get('/file/:filename', (req, res) => {
     const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
-    downloadStream.pipe(res).on('error', () => {
-        res.status(404).send('File not found');
-    });
-    downloadStream.on('error', (err) => {
+
+    downloadStream.pipe(res).on('error', (err) => {
         console.error('Error streaming file:', err);
         res.status(500).send('Error retrieving file.');
+    });
+
+    downloadStream.on('end', () => {
+        console.log(`File ${req.params.filename} sent successfully`);
     });
 });
