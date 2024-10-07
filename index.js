@@ -50,8 +50,13 @@ const upload = multer({
     }
 }).single('file');
 
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.static('public'));
-app.use(cors());
 app.use(favicon(path.join(__dirname, 'favicon.ico')));
 
 app.get('/', (req, res) => {
