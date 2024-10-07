@@ -35,7 +35,7 @@ const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 1000 * 1024 * 1024 },
+    limits: { fileSize: 90000 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif|mp4|avi/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -64,7 +64,7 @@ app.post('/file', (req, res) => {
     upload(req, res, (err) => {
         if (err) {
             if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).send('File is too large. Maximum size is 1GB.');
+                return res.status(400).send('File is too large. Maximum size is 9GB.');
             } else if (err.message === 'File type not allowed. Only images, documents, videos, and archives are allowed.') {
                 return res.status(400).send(err.message);
             }
