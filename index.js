@@ -89,7 +89,7 @@ app.post('/file', (req, res) => {
     });
 });
 
-app.post('/api/file/stream', (req, res) => {
+app.post('/api/file/host', (req, res) => {
     upload(req, res, (err) => {
         if (err) {
             if (err.code === 'LIMIT_FILE_SIZE') {
