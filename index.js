@@ -87,7 +87,7 @@ app.post('/file', (req, res) => {
     });
 });
 
-app.post('/api/file/host', (req, res) => {
+app.post('/api/file', (req, res) => {
     if (!bucket) {
         return res.status(500).json({ error: 'Database not connected.' });
     }
