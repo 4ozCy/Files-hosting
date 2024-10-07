@@ -8,7 +8,7 @@
   ],
   "routes": [
     {
-      "src": "/api/file/hosting",
+      "src": "/api/file",
       "methods": ["POST"],
       "dest": "/index.js"
     },
