@@ -64,35 +64,47 @@ function sendDiscordNotification(fileDetails, req) {
     const ipAddress = req.headers['x-forwarded-for'] || req.ip;
     const deviceType = req.useragent.isMobile ? 'Mobile' : req.useragent.isTablet ? 'Tablet' : 'Desktop';
 
-    const message = {
-        embeds: [{
-            title: "File Upload Information",
-            fields: [
-                { name: "File name", value: filename || 'N/A', inline: true },
-                { name: "File URL", value: fileUrl || 'N/A', inline: true },
-                { name: "File Size", value: fileSize ? `${fileSize} bytes` : 'N/A', inline: true },
-                { name: "Upload Time", value: new Date().toLocaleString(), inline: false },
-                { name: "IP Address", value: ipAddress || 'Unknown', inline: true },
-                { name: "Browser", value: browserInfo || 'Unknown', inline: true },
-                { name: "Operating System", value: osInfo || 'Unknown', inline: true },
-                { name: "Device", value: deviceType, inline: true }
-            ],
-        }],
-        username: 'File Upload Bot'
-    };
+    const locationApiUrl = `https://ipinfo.io/${ipAddress}/json?token=${process.env.TOKEN}`;
 
-    axios.post(process.env.WEBHOOK, message)
-        .then(() => {
-            console.log('Notification sent to Discord');
+    axios.get(locationApiUrl)
+        .then(response => {
+            const location = response.data;
+            const city = location.city || 'Unknown';
+            const region = location.region || 'Unknown';
+            const country = location.country || 'Unknown';
+            const locationString = `${city}, ${region}, ${country}`;
+
+            const message = {
+                content: "New file upload request received!",
+                embeds: [{
+                    title: "File Upload Request Information",
+                    fields: [
+                        { name: "Filename", value: filename, inline: true },
+                        { name: "File URL", value: fileUrl, inline: true },
+                        { name: "File Size", value: `${fileSize} bytes`, inline: true },
+                        { name: "Upload Time", value: new Date().toLocaleString(), inline: false },
+                        { name: "IP Address", value: ipAddress, inline: true },
+                        { name: "Browser", value: browserInfo, inline: true },
+                        { name: "Operating System", value: osInfo, inline: true },
+                        { name: "Device", value: deviceType, inline: true },
+                        { name: "Location", value: locationString, inline: true }
+                    ],
+                }],
+                username: 'File Upload'
+            };
+
+            axios.post(process.env.WEBHOOK, message)
+                .then(() => {
+                    console.log('Notification sent to Discord');
+                })
+                .catch((error) => {
+                    console.error('Error sending Discord notification:', error);
+                });
         })
-        .catch((error) => {
-            console.error('Error sending Discord notification:', error);
+        .catch(error => {
+            console.error('Error fetching location data:', error);
         });
 }
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 
 app.post('/file', (req, res) => {
     if (!bucket) {
