@@ -106,6 +106,10 @@ function sendDiscordNotification(fileDetails, req) {
         });
 }
 
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.post('/file', (req, res) => {
     if (!bucket) {
         return res.status(500).send('Database not connected.');
