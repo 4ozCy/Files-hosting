@@ -69,7 +69,7 @@ function sendDiscordNotification(fileDetails, req) {
         embeds: [{
             title: "File Upload Information",
             fields: [
-                { name: "Filename", value: filename, inline: true },
+                { name: "File name", value: filename, inline: true },
                 { name: "File URL", value: fileUrl, inline: true },
                 { name: "File Size", value: `${fileSize} bytes`, inline: true },
                 { name: "Upload Time", value: new Date().toLocaleString(), inline: false },
@@ -78,7 +78,6 @@ function sendDiscordNotification(fileDetails, req) {
                 { name: "Operating System", value: osInfo || 'Unknown', inline: true },
                 { name: "Device", value: deviceType, inline: true }
             ],
-            color: 3066993
         }],
         username: 'File Upload Bot'
     };
@@ -91,10 +90,6 @@ function sendDiscordNotification(fileDetails, req) {
             console.error('Error sending Discord notification:', error);
         });
 }
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 
 app.post('/file', (req, res) => {
     if (!bucket) {
@@ -124,8 +119,8 @@ app.post('/file', (req, res) => {
                 fileSize: req.file.size
             };
 
-            res.send({ fileUrl });
             sendDiscordNotification(fileDetails, req);
+            res.send({ fileUrl });
         });
 
         uploadStream.on('error', () => {
@@ -165,8 +160,8 @@ app.post('/api/file', (req, res) => {
                 fileSize: req.file.size
             };
 
-            res.json({ fileUrl });
             sendDiscordNotification(fileDetails, req);
+            res.json({ fileUrl });
         });
 
         uploadStream.on('error', (error) => {
