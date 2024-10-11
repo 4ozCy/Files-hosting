@@ -106,16 +106,10 @@ function sendDiscordNotification(fileDetails, req) {
         });
 }
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 app.post('/file', (req, res) => {
     if (!bucket) {
         return res.status(500).send('Database not connected.');
     }
-
-    sendDiscordNotification(null, req);
 
     upload(req, res, (err) => {
         if (err) {
@@ -156,8 +150,6 @@ app.post('/api/file', (req, res) => {
         return res.status(500).json({ error: 'Database not connected.' });
     }
 
-    sendDiscordNotification(null, req);
-
     upload(req, res, (err) => {
         if (err) {
             console.error('Error during file upload:', err.message);
@@ -184,7 +176,7 @@ app.post('/api/file', (req, res) => {
                 fileSize: req.file.size
             };
 
-            sendDiscordNotification(fileDetails, req);
+            sendDiscordNotification(fileDetails, req); // Send the notification immediately after the file is uploaded
             res.json({ fileUrl });
         });
 
@@ -206,4 +198,8 @@ app.get('/file/:filename', (req, res) => {
     downloadStream.on('end', () => {
         console.log(`File ${req.params.filename} sent successfully`);
     });
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
