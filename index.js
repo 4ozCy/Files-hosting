@@ -58,20 +58,19 @@ app.use(useragent.express());
 app.set('trust proxy', true);
 
 function sendDiscordNotification(fileDetails, req) {
-    const { filename, fileUrl, fileSize } = fileDetails;
+    const { filename, fileUrl, fileSize } = fileDetails || {};
     const browserInfo = req.useragent.browser;
     const osInfo = req.useragent.os;
     const ipAddress = req.headers['x-forwarded-for'] || req.ip;
     const deviceType = req.useragent.isMobile ? 'Mobile' : req.useragent.isTablet ? 'Tablet' : 'Desktop';
 
     const message = {
-        content: "New file uploaded!",
         embeds: [{
             title: "File Upload Information",
             fields: [
-                { name: "File name", value: filename, inline: true },
-                { name: "File URL", value: fileUrl, inline: true },
-                { name: "File Size", value: `${fileSize} bytes`, inline: true },
+                { name: "File name", value: filename || 'N/A', inline: true },
+                { name: "File URL", value: fileUrl || 'N/A', inline: true },
+                { name: "File Size", value: fileSize ? `${fileSize} bytes` : 'N/A', inline: true },
                 { name: "Upload Time", value: new Date().toLocaleString(), inline: false },
                 { name: "IP Address", value: ipAddress || 'Unknown', inline: true },
                 { name: "Browser", value: browserInfo || 'Unknown', inline: true },
@@ -91,10 +90,16 @@ function sendDiscordNotification(fileDetails, req) {
         });
 }
 
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.post('/file', (req, res) => {
     if (!bucket) {
         return res.status(500).send('Database not connected.');
     }
+
+    sendDiscordNotification(null, req);
 
     upload(req, res, (err) => {
         if (err) {
@@ -111,6 +116,7 @@ app.post('/file', (req, res) => {
 
         const filename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
         const uploadStream = bucket.openUploadStream(filename);
+
         uploadStream.end(req.file.buffer, () => {
             const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
             const fileDetails = {
@@ -133,6 +139,8 @@ app.post('/api/file', (req, res) => {
     if (!bucket) {
         return res.status(500).json({ error: 'Database not connected.' });
     }
+
+    sendDiscordNotification(null, req);
 
     upload(req, res, (err) => {
         if (err) {
