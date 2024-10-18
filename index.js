@@ -35,7 +35,18 @@ const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: Infinity },
+    limits: { fileSize: 15000 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|mp4|avi|mov|mkv|webm|wmv|hevc|h265/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = /image\/jpeg|image\/png|image\/gif|video\/mp4|video\/avi|video\/quicktime|video\/x-matroska|video\/webm|video\/x-ms-wmv|video\/hevc/.test(file.mimetype);
+
+        if (extname && mimetype) {
+            return cb(null, true);
+        } else {
+            cb(new Error('File type not allowed. Only images and videos are allowed.'));
+        }
+    }
 }).single('file');
 
 app.use(express.static('public'));
@@ -52,6 +63,11 @@ app.post('/file', (req, res) => {
 
     upload(req, res, (err) => {
         if (err) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).send('File is too large. Maximum size is 15GB.');
+            } else if (err.message === 'File type not allowed. Only images and videos are allowed.') {
+                return res.status(400).send(err.message);
+            }
             return res.status(500).send('File upload failed.');
         }
         if (!req.file) {
@@ -78,6 +94,11 @@ app.post('/api/file', (req, res) => {
 
     upload(req, res, (err) => {
         if (err) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ error: 'File is too large. Maximum size is 15GB.' });
+            } else if (err.message === 'File type not allowed. Only images and videos are allowed.') {
+                return res.status(400).json({ error: err.message });
+            }
             return res.status(500).json({ error: 'File upload failed.' });
         }
 
