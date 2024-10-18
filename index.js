@@ -35,18 +35,7 @@ const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 90000 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png|gif|mp4|avi/;
-        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
-
-        if (extname && mimetype) {
-            return cb(null, true);
-        } else {
-            cb(new Error('File type not allowed. Only images, documents, videos, and archives are allowed.'));
-        }
-    }
+    limits: { fileSize: Infinity },
 }).single('file');
 
 app.use(express.static('public'));
@@ -63,11 +52,6 @@ app.post('/file', (req, res) => {
 
     upload(req, res, (err) => {
         if (err) {
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).send('File is too large. Maximum size is 9GB.');
-            } else if (err.message === 'File type not allowed. Only images, documents, videos, and archives are allowed.') {
-                return res.status(400).send(err.message);
-            }
             return res.status(500).send('File upload failed.');
         }
         if (!req.file) {
@@ -94,12 +78,6 @@ app.post('/api/file', (req, res) => {
 
     upload(req, res, (err) => {
         if (err) {
-            console.error('Error during file upload:', err.message);
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).json({ error: 'File is too large. Maximum size is 1GB.' });
-            } else if (err.message === 'File type not allowed. Only images, videos are allowed.') {
-                return res.status(400).json({ error: err.message });
-            }
             return res.status(500).json({ error: 'File upload failed.' });
         }
 
@@ -116,7 +94,6 @@ app.post('/api/file', (req, res) => {
         });
 
         uploadStream.on('error', (error) => {
-            console.error('Error uploading file:', error);
             res.status(500).json({ error: 'File upload failed.' });
         });
     });
@@ -126,7 +103,6 @@ app.get('/file/:filename', (req, res) => {
     const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
 
     downloadStream.pipe(res).on('error', (err) => {
-        console.error('Error streaming file:', err);
         res.status(500).send('Error retrieving file.');
     });
 
