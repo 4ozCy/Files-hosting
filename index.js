@@ -5,6 +5,7 @@ const { MongoClient, GridFSBucket } = require('mongodb');
 const path = require('path');
 const crypto = require('crypto');
 const favicon = require('serve-favicon');
+const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -31,7 +32,19 @@ function generateRandomString(length) {
     return crypto.randomBytes(length).toString('hex').slice(0, length);
 }
 
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadPath = 'uploads/';
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        const filename = `${generateRandomString(5)}${path.extname(file.originalname)}`;
+        cb(null, filename);
+    }
+});
 
 const upload = multer({
     storage: storage,
@@ -74,16 +87,33 @@ app.post('/file', (req, res) => {
             return res.status(400).send('No file uploaded.');
         }
 
-        const filename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
+        const filename = req.file.filename;
         const uploadStream = bucket.openUploadStream(filename);
-        uploadStream.end(req.file.buffer, () => {
+        const fileReadStream = fs.createReadStream(req.file.path);
+
+        fileReadStream.pipe(uploadStream).on('error', (error) => {
+            console.error('Error during file upload:', error);
+            return res.status(500).send('File upload failed.');
+        });
+
+        uploadStream.on('finish', () => {
+            fs.unlinkSync(req.file.path);
+
             const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
             res.send({ fileUrl });
         });
+    });
+});
 
-        uploadStream.on('error', () => {
-            res.status(500).send('File upload failed.');
-        });
+app.get('/file/:filename', (req, res) => {
+    const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
+
+    downloadStream.pipe(res).on('error', (err) => {
+        res.status(500).send('Error retrieving file.');
+    });
+
+    downloadStream.on('end', () => {
+        console.log(`File ${req.params.filename} sent successfully`);
     });
 });
 
@@ -106,28 +136,20 @@ app.post('/api/file', (req, res) => {
             return res.status(400).json({ error: 'No file uploaded.' });
         }
 
-        const filename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
+        const filename = req.file.filename;
         const uploadStream = bucket.openUploadStream(filename);
+        const fileReadStream = fs.createReadStream(req.file.path);
 
-        uploadStream.end(req.file.buffer, () => {
+        fileReadStream.pipe(uploadStream).on('error', (error) => {
+            console.error('Error during file upload:', error);
+            return res.status(500).json({ error: 'File upload failed.' });
+        });
+
+        uploadStream.on('finish', () => {
+            fs.unlinkSync(req.file.path);
+
             const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
             res.json({ fileUrl });
         });
-
-        uploadStream.on('error', (error) => {
-            res.status(500).json({ error: 'File upload failed.' });
-        });
-    });
-});
-
-app.get('/file/:filename', (req, res) => {
-    const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
-
-    downloadStream.pipe(res).on('error', (err) => {
-        res.status(500).send('Error retrieving file.');
-    });
-
-    downloadStream.on('end', () => {
-        console.log(`File ${req.params.filename} sent successfully`);
     });
 });
