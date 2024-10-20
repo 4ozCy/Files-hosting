@@ -6,12 +6,12 @@
     <title>files box</title>
     
     <meta property="og:title" content="Files Box - Upload Your Files Easily" />
-    <meta property="og:description" content="Upload and share files up to 9GB quickly and securely with Files Box." />
+    <meta property="og:description" content="Upload and share files up to 5GB quickly and securely with Files Box." />
     <meta property="og:image" content="http://files-box.vercel.app/file/c4606.png" />
     <meta property="og:url" content="https://files-box.vercel.app/" />
     <meta property="og:type" content="website" />
     
-    <meta name="description" content="Files Box - Upload and share files up to 20GB quickly and securely." />
+    <meta name="description" content="Files Box - Upload and share files up to 5GB quickly and securely." />
     <meta name="keywords" content="file upload, file sharing, files box, upload files" />
     <meta name="author" content="@n.int" />
     
@@ -181,7 +181,7 @@
     </div>
     <div class="container">
         <h1>Upload Your File (Max 20GB)</h1>
-        <div class="error-message" id="errorMessage">Invalid file format. Only images, documents, videos, and archives are allowed.</div>
+        <div class="error-message" id="errorMessage">Invalid file format. Only images, and videos are allowed.</div>
         <form id="uploadForm" enctype="multipart/form-data">
             <input type="file" name="file" id="fileInput" required>
             <div class="drop-zone" id="dropZone">Drag & drop your file here or click to select</div>
@@ -199,99 +199,116 @@
     </div>
     <script>
         const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const uploadButton = document.getElementById('uploadButton');
-        const progressBar = document.getElementById('progressBar');
-        const progressBarFill = document.getElementById('progressBarFill');
-        const result = document.getElementById('result');
-        const linkBox = document.getElementById('linkBox');
-        const fileLink = document.getElementById('fileLink');
-        const openButton = document.getElementById('openButton');
+const fileInput = document.getElementById('fileInput');
+const uploadButton = document.getElementById('uploadButton');
+const progressBar = document.getElementById('progressBar');
+const progressBarFill = document.getElementById('progressBarFill');
+const result = document.getElementById('result');
+const linkBox = document.getElementById('linkBox');
+const fileLink = document.getElementById('fileLink');
+const openButton = document.getElementById('openButton');
 
-        function updateDropZoneText(fileName) {
-            dropZone.textContent = `Selected file: ${fileName}`;
-            uploadButton.style.display = 'block';
+function updateDropZoneText(fileName) {
+    dropZone.textContent = `Selected file: ${fileName}`;
+    uploadButton.style.display = 'block';
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        updateDropZoneText(fileInput.files[0].name);
+    }
+});
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length > 0) {
+        updateDropZoneText(fileInput.files[0].name);
+    }
+});
+
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    progressBar.style.display = 'block';
+    uploadButton.disabled = true;
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            progressBarFill.style.width = `${percentComplete}%`;
         }
+    });
 
-        dropZone.addEventListener('click', () => fileInput.click());
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                updateDropZoneText(fileInput.files[0].name);
-            }
-        });
-
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length > 0) {
-                updateDropZoneText(fileInput.files[0].name);
-            }
-        });
-
-        document.getElementById('uploadForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            progressBar.style.display = 'block';
-            uploadButton.disabled = true;
-
-            const xhr = new XMLHttpRequest();
-
-            xhr.upload.addEventListener('progress', (e) => {
-                if (e.lengthComputable) {
-                    const percentComplete = (e.loaded / e.total) * 100;
-                    progressBarFill.style.width = `${percentComplete}%`;
-                }
-            });
-
-            xhr.addEventListener('load', () => {
-                if (xhr.status === 200) {
-                    const response = JSON.parse(xhr.responseText);
-                    displayResult(response.fileUrl);
-                    copyToClipboard(response.fileUrl);
-                } else {
-                    result.textContent = 'Failed to upload file.';
-                }
-                progressBar.style.display = 'none';
-                uploadButton.disabled = false;
-            });
-
-            xhr.addEventListener('error', () => {
-                result.textContent = 'Failed to upload file.';
-                progressBar.style.display = 'none';
-                uploadButton.disabled = false;
-            });
-
-            xhr.open('POST', '/file');
-            xhr.send(formData);
-        });
-
-        function displayResult(fileUrl) {
-            fileLink.textContent = fileUrl;
-            linkBox.style.display = 'flex';
-
-            openButton.onclick = () => window.open(fileUrl, '_blank');
+    xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+            displayResult(response.fileUrl);
+            copyToClipboard(response.fileUrl);
+        } else {
+            result.textContent = 'Failed to upload file.';
         }
+        progressBar.style.display = 'none';
+        uploadButton.disabled = false;
+    });
 
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Link copied to clipboard!');
-            }).catch(err => {
-                console.error('Failed to copy: ', err);
-            });
-        }
-    </script>
+    xhr.addEventListener('error', () => {
+        result.textContent = 'Failed to upload file.';
+        progressBar.style.display = 'none';
+        uploadButton.disabled = false;
+    });
+
+    xhr.open('POST', '/file');
+    xhr.send(formData);
+});
+
+function displayResult(fileUrl) {
+    fileLink.textContent = fileUrl;
+    linkBox.style.display = 'flex';
+    const ext = fileUrl.split('.').pop().toLowerCase();
+    const videoTypes = {
+        'mp4': 'video/mp4',
+        'webm': 'video/webm',
+        'ogg': 'video/ogg',
+        'avi': 'video/x-msvideo',
+        'mov': 'video/quicktime',
+        'mkv': 'video/x-matroska'
+    };
+    const mimeType = videoTypes[ext];
+    if (mimeType) {
+        const videoElement = document.createElement('video');
+        videoElement.controls = true;
+        videoElement.width = 600;
+        videoElement.src = fileUrl;
+        videoElement.type = mimeType;
+        linkBox.innerHTML = ''; 
+        linkBox.appendChild(videoElement);
+    } else {
+        openButton.onclick = () => window.open(fileUrl, '_blank');
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('File URL copied to clipboard!');
+    });
+}
+</script>
 </body>
 </html>
