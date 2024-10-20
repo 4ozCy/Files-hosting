@@ -35,7 +35,7 @@ const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 200000 * 1024 * 1024 },
+    limits: { fileSize: 90000 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif|mp4|avi|mkv|webm/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -44,7 +44,7 @@ const upload = multer({
         if (extname && mimetype) {
             return cb(null, true);
         } else {
-            cb(new Error('File type not allowed. Only images and videos are allowed.'));
+            cb(new Error('File type not allowed. Only images, documents, videos, and archives are allowed.'));
         }
     }
 }).single('file');
@@ -65,7 +65,7 @@ app.post('/file', (req, res) => {
         if (err) {
             if (err.code === 'LIMIT_FILE_SIZE') {
                 return res.status(400).send('File is too large. Maximum size is 9GB.');
-            } else if (err.message === 'File type not allowed. Only images and videos are allowed.') {
+            } else if (err.message === 'File type not allowed. Only images, documents, videos, and archives are allowed.') {
                 return res.status(400).send(err.message);
             }
             return res.status(500).send('File upload failed.');
@@ -96,7 +96,7 @@ app.post('/api/file', (req, res) => {
         if (err) {
             if (err.code === 'LIMIT_FILE_SIZE') {
                 return res.status(400).json({ error: 'File is too large. Maximum size is 9GB.' });
-            } else if (err.message === 'File type not allowed. Only images and videos are allowed.') {
+            } else if (err.message === 'File type not allowed. Only images, documents, videos, and archives are allowed.') {
                 return res.status(400).json({ error: err.message });
             }
             return res.status(500).json({ error: 'File upload failed.' });
@@ -127,8 +127,8 @@ app.get('/file/:filename', (req, res) => {
         }
 
         const fileType = path.extname(files[0].filename).toLowerCase();
-        let contentType;
 
+        let contentType;
         switch (fileType) {
             case '.mp4':
                 contentType = 'video/mp4';
@@ -147,9 +147,9 @@ app.get('/file/:filename', (req, res) => {
         }
 
         res.set('Content-Type', contentType);
-        res.set('Content-Disposition', 'inline');
 
         const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
+
         downloadStream.pipe(res).on('error', (err) => {
             res.status(500).send('Error retrieving file.');
         });
