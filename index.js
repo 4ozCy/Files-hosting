@@ -1,37 +1,36 @@
 require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
-const { MongoClient, GridFSBucket } = require('mongodb');
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const crypto = require('crypto');
 const favicon = require('serve-favicon');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const client = new MongoClient(process.env.MONGODB_URL, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+const db = new sqlite3.Database('files.db', (err) => {
+    if (err) {
+        console.error('Database opening error: ', err);
+    }
 });
 
-let bucket;
-
-client.connect().then(() => {
-    const db = client.db();
-    bucket = new GridFSBucket(db, { bucketName: 'uploads' });
-
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
-}).catch(err => {
-    console.error('Failed to connect to MongoDB', err);
-    process.exit(1);
+db.serialize(() => {
+    db.run('CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT NOT NULL, content_type TEXT NOT NULL, size INTEGER NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
 });
 
 function generateRandomString(length) {
     return crypto.randomBytes(length).toString('hex').slice(0, length);
 }
 
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        const filename = `${generateRandomString(5)}${path.extname(file.originalname)}`;
+        cb(null, filename);
+    }
+});
 
 const upload = multer({
     storage: storage,
@@ -44,7 +43,7 @@ const upload = multer({
         if (extname && mimetype) {
             return cb(null, true);
         } else {
-            cb(new Error('File type not allowed. Only images, documents, videos, and archives are allowed.'));
+            cb(new Error('File type not allowed. Only images and videos are allowed.'));
         }
     }
 }).single('file');
@@ -57,78 +56,35 @@ app.get('/', (req, res) => {
 });
 
 app.post('/file', (req, res) => {
-    if (!bucket) {
-        return res.status(500).send('Database not connected.');
-    }
-
     upload(req, res, (err) => {
         if (err) {
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).send('File is too large. Maximum size is 9GB.');
-            } else if (err.message === 'File type not allowed. Only images, documents, videos, and archives are allowed.') {
-                return res.status(400).send(err.message);
-            }
-            return res.status(500).send('File upload failed.');
+            return res.status(400).send(err.message);
         }
         if (!req.file) {
             return res.status(400).send('No file uploaded.');
         }
 
-        const filename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
-        const uploadStream = bucket.openUploadStream(filename);
-        uploadStream.end(req.file.buffer, () => {
+        const { filename, mimetype, size } = req.file;
+
+        db.run('INSERT INTO files (filename, content_type, size) VALUES (?, ?, ?)', [filename, mimetype, size], function(err) {
+            if (err) {
+                return res.status(500).send('Database error.');
+            }
             const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
             res.send({ fileUrl });
-        });
-
-        uploadStream.on('error', () => {
-            res.status(500).send('File upload failed.');
-        });
-    });
-});
-
-app.post('/api/file', (req, res) => {
-    if (!bucket) {
-        return res.status(500).json({ error: 'Database not connected.' });
-    }
-
-    upload(req, res, (err) => {
-        if (err) {
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(400).json({ error: 'File is too large. Maximum size is 9GB.' });
-            } else if (err.message === 'File type not allowed. Only images, documents, videos, and archives are allowed.') {
-                return res.status(400).json({ error: err.message });
-            }
-            return res.status(500).json({ error: 'File upload failed.' });
-        }
-
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded.' });
-        }
-
-        const filename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
-        const uploadStream = bucket.openUploadStream(filename);
-
-        uploadStream.end(req.file.buffer, () => {
-            const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
-            res.json({ fileUrl });
-        });
-
-        uploadStream.on('error', (error) => {
-            res.status(500).json({ error: 'File upload failed.' });
         });
     });
 });
 
 app.get('/file/:filename', (req, res) => {
-    bucket.find({ filename: req.params.filename }).toArray((err, files) => {
-        if (!files || files.length === 0) {
+    db.get('SELECT * FROM files WHERE filename = ?', [req.params.filename], (err, file) => {
+        if (!file) {
             return res.status(404).send('File not found.');
         }
 
-        const fileType = path.extname(files[0].filename).toLowerCase();
-
+        const fileType = path.extname(file.filename).toLowerCase();
         let contentType;
+
         switch (fileType) {
             case '.mp4':
                 contentType = 'video/mp4';
@@ -147,15 +103,16 @@ app.get('/file/:filename', (req, res) => {
         }
 
         res.set('Content-Type', contentType);
+        const filePath = path.join(__dirname, 'uploads', file.filename);
 
-        const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
-
-        downloadStream.pipe(res).on('error', (err) => {
-            res.status(500).send('Error retrieving file.');
-        });
-
-        downloadStream.on('end', () => {
-            console.log(`File ${req.params.filename} sent successfully`);
+        res.download(filePath, file.filename, (err) => {
+            if (err) {
+                res.status(500).send('Error retrieving file.');
+            }
         });
     });
+});
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
