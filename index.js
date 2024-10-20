@@ -1,49 +1,50 @@
 require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
-const sqlite3 = require('sqlite3').verbose();
+const { MongoClient, GridFSBucket } = require('mongodb');
 const path = require('path');
 const crypto = require('crypto');
 const favicon = require('serve-favicon');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
-const db = new sqlite3.Database('files.db', (err) => {
-    if (err) {
-        console.error('Database opening error: ', err);
-    }
+const client = new MongoClient(process.env.MONGODB_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
 });
 
-db.serialize(() => {
-    db.run('CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT NOT NULL, content_type TEXT NOT NULL, size INTEGER NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
+let bucket;
+
+client.connect().then(() => {
+    const db = client.db();
+    bucket = new GridFSBucket(db, { bucketName: 'uploads' });
+
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}).catch(err => {
+    console.error('Failed to connect to MongoDB', err);
+    process.exit(1);
 });
 
 function generateRandomString(length) {
     return crypto.randomBytes(length).toString('hex').slice(0, length);
 }
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        const filename = `${generateRandomString(5)}${path.extname(file.originalname)}`;
-        cb(null, filename);
-    }
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 90000 * 1024 * 1024 },
+    limits: { fileSize: 50000 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png|gif|mp4|avi|mkv|webm/;
+        const allowedTypes = /jpeg|jpg|png|gif|mp4|avi|mov|mkv/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
         const mimetype = allowedTypes.test(file.mimetype);
 
         if (extname && mimetype) {
             return cb(null, true);
         } else {
-            cb(new Error('File type not allowed. Only images and videos are allowed.'));
+            cb(new Error('File type not allowed. Only images, and videos are allowed.'));
         }
     }
 }).single('file');
@@ -56,63 +57,93 @@ app.get('/', (req, res) => {
 });
 
 app.post('/file', (req, res) => {
+    if (!bucket) {
+        return res.status(500).send('Database not connected.');
+    }
+
     upload(req, res, (err) => {
         if (err) {
-            return res.status(400).send(err.message);
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).send('File is too large. Maximum size is 9GB.');
+            } else if (err.message === 'File type not allowed. Only images, documents, videos, and archives are allowed.') {
+                return res.status(400).send(err.message);
+            }
+            return res.status(500).send('File upload failed.');
         }
         if (!req.file) {
             return res.status(400).send('No file uploaded.');
         }
 
-        const { filename, mimetype, size } = req.file;
-
-        db.run('INSERT INTO files (filename, content_type, size) VALUES (?, ?, ?)', [filename, mimetype, size], function(err) {
-            if (err) {
-                return res.status(500).send('Database error.');
-            }
+        const filename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
+        const uploadStream = bucket.openUploadStream(filename);
+        uploadStream.end(req.file.buffer, () => {
             const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
             res.send({ fileUrl });
+        });
+
+        uploadStream.on('error', () => {
+            res.status(500).send('File upload failed.');
+        });
+    });
+});
+
+app.post('/api/file', (req, res) => {
+    if (!bucket) {
+        return res.status(500).json({ error: 'Database not connected.' });
+    }
+
+    upload(req, res, (err) => {
+        if (err) {
+            console.error('Error during file upload:', err.message);
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ error: 'File is too large. Maximum size is 1GB.' });
+            } else if (err.message === 'File type not allowed. Only images, videos are allowed.') {
+                return res.status(400).json({ error: err.message });
+            }
+            return res.status(500).json({ error: 'File upload failed.' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded.' });
+        }
+
+        const filename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
+        const uploadStream = bucket.openUploadStream(filename);
+
+        uploadStream.end(req.file.buffer, () => {
+            const fileUrl = `${req.protocol}://${req.get('host')}/file/${filename}`;
+            res.json({ fileUrl });
+        });
+
+        uploadStream.on('error', (error) => {
+            console.error('Error uploading file:', error);
+            res.status(500).json({ error: 'File upload failed.' });
         });
     });
 });
 
 app.get('/file/:filename', (req, res) => {
-    db.get('SELECT * FROM files WHERE filename = ?', [req.params.filename], (err, file) => {
-        if (!file) {
-            return res.status(404).send('File not found.');
-        }
+    const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
+    const ext = path.extname(req.params.filename).toLowerCase();
 
-        const fileType = path.extname(file.filename).toLowerCase();
-        let contentType;
+    const mimeTypes = {
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+        '.ogg': 'video/ogg',
+        '.avi': 'video/x-msvideo',
+        '.mov': 'video/quicktime',
+        '.mkv': 'video/x-matroska'
+    };
 
-        switch (fileType) {
-            case '.mp4':
-                contentType = 'video/mp4';
-                break;
-            case '.avi':
-                contentType = 'video/x-msvideo';
-                break;
-            case '.mkv':
-                contentType = 'video/x-matroska';
-                break;
-            case '.webm':
-                contentType = 'video/webm';
-                break;
-            default:
-                return res.status(400).send('Unsupported media type.');
-        }
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    res.set('Content-Type', contentType);
 
-        res.set('Content-Type', contentType);
-        const filePath = path.join(__dirname, 'uploads', file.filename);
-
-        res.download(filePath, file.filename, (err) => {
-            if (err) {
-                res.status(500).send('Error retrieving file.');
-            }
-        });
+    downloadStream.pipe(res).on('error', (err) => {
+        console.error('Error streaming file:', err);
+        res.status(500).send('Error retrieving file.');
     });
-});
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    downloadStream.on('end', () => {
+        console.log(`File ${req.params.filename} sent successfully`);
+    });
 });
