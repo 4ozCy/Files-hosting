@@ -20,7 +20,7 @@ client
   .connect()
   .then(() => {
     const db = client.db();
-    bucket = new GridFSBucket(db, { bucketName: "upload" });
+    bucket = new GridFSBucket(db, { bucketName: "uploads" });
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
@@ -146,6 +146,9 @@ app.post("/api/file", (req, res) => {
 
 app.get('/file/:filename', (req, res) => {
     const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
+
+    res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Content-Disposition', 'inline');
 
     downloadStream.pipe(res).on('error', (err) => {
         console.error('Error streaming file:', err);
