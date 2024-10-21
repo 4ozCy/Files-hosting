@@ -147,15 +147,17 @@ app.post("/api/file", (req, res) => {
 app.get('/file/:filename', (req, res) => {
     const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
 
-    res.setHeader('Content-Type', 'video/mp4');
-    res.setHeader('Content-Disposition', 'inline');
-
-    downloadStream.pipe(res).on('error', (err) => {
+    downloadStream.on('error', (err) => {
         console.error('Error streaming file:', err);
-        res.status(500).send('Error retrieving file.');
+        if (!res.headersSent) {
+            res.status(500).send('Error retrieving file.');
+        }
     });
 
-    downloadStream.on('end', () => {
+    downloadStream.pipe(res).on('finish', () => {
         console.log(`File ${req.params.filename} sent successfully`);
+        if (!res.headersSent) {
+            res.end();
+        }
     });
 });
