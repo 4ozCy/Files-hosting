@@ -113,7 +113,7 @@ app.post("/api/file", (req, res) => {
       if (err.code === "LIMIT_FILE_SIZE") {
         return res
           .status(400)
-          .json({ error: "File is too large. Maximum size is 100MB." });
+          .json({ error: "File is too large. Maximum size is 10GB." });
       } else if (
         err.message ===
         "File type not allowed. Only images and videos are allowed."
