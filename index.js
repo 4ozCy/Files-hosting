@@ -20,7 +20,7 @@ client
   .connect()
   .then(() => {
     const db = client.db();
-    bucket = new GridFSBucket(db, { bucketName: "uploads" });
+    bucket = new GridFSBucket(db, { bucketName: "files" });
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
