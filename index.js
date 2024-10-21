@@ -20,7 +20,7 @@ client
   .connect()
   .then(() => {
     const db = client.db();
-    bucket = new GridFSBucket(db, { bucketName: "files" });
+    bucket = new GridFSBucket(db, { bucketName: "upload" });
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
@@ -91,11 +91,11 @@ app.post("/file", (req, res) => {
       req.file.originalname
     )}`;
     const uploadStream = bucket.openUploadStream(filename);
-    const fileUrl = `${req.protocol}://${req.get("host")}/f/${filename}`;
+    const fileUrl = `${req.protocol}://${req.get("host")}/file/${filename}`;
     uploadStream.end(req.file.buffer, () => {
       res.send({ fileUrl });
     });
-
+    
     uploadStream.on("error", () => {
       res.status(500).send("File upload failed.");
     });
@@ -133,7 +133,7 @@ app.post("/api/file", (req, res) => {
     const uploadStream = bucket.openUploadStream(filename);
 
     uploadStream.end(req.file.buffer, () => {
-      const fileUrl = `${req.protocol}://${req.get("host")}/f/${filename}`;
+      const fileUrl = `${req.protocol}://${req.get("host")}/file/${filename}`;
       res.json({ fileUrl });
     });
 
@@ -144,38 +144,15 @@ app.post("/api/file", (req, res) => {
   });
 });
 
-app.get("/f/:filename", (req, res) => {
-  if (!bucket) {
-    return res.status(500).send("Database not connected.");
-  }
+app.get('/file/:filename', (req, res) => {
+    const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
 
-  bucket.find({ filename: req.params.filename }).toArray((err, files) => {
-    if (!files || files.length === 0) {
-      return res.status(404).json({ error: "No file exists" });
-    }
+    downloadStream.pipe(res).on('error', (err) => {
+        console.error('Error streaming file:', err);
+        res.status(500).send('Error retrieving file.');
+    });
 
-    const file = files[0];
-    const range = req.headers.range;
-
-    if (!range) {
-      return res.status(400).send("Requires Range header");
-    }
-
-    const fileSize = file.length;
-    const parts = range.replace(/bytes=/, "").split("-");
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    const chunkSize = end - start + 1;
-
-    const head = {
-      "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-      "Accept-Ranges": "bytes",
-      "Content-Length": chunkSize,
-      "Content-Type": file.contentType,
-    };
-    res.writeHead(206, head);
-
-    const downloadStream = bucket.openDownloadStream(file._id, { start, end });
-    downloadStream.pipe(res);
-  });
+    downloadStream.on('end', () => {
+        console.log(`File ${req.params.filename} sent successfully`);
+    });
 });
