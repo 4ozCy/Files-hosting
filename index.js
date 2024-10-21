@@ -6,7 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const favicon = require('serve-favicon');
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
 const client = new MongoClient(process.env.MONGODB_URL, {
     useNewUrlParser: true,
@@ -35,7 +35,7 @@ const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5000 * 1024 * 1024 },
+    limits: { fileSize: 10000 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif|mp4|avi|mov|mkv/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -124,19 +124,6 @@ app.post('/api/file', (req, res) => {
 
 app.get('/file/:filename', (req, res) => {
     const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
-    const ext = path.extname(req.params.filename).toLowerCase();
-
-    const mimeTypes = {
-        '.mp4': 'video/mp4',
-        '.webm': 'video/webm',
-        '.ogg': 'video/ogg',
-        '.avi': 'video/x-msvideo',
-        '.mov': 'video/quicktime',
-        '.mkv': 'video/x-matroska'
-    };
-
-    const contentType = mimeTypes[ext] || 'application/octet-stream';
-    res.set('Content-Type', contentType);
 
     downloadStream.pipe(res).on('error', (err) => {
         console.error('Error streaming file:', err);
