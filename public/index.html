@@ -4,17 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>files box</title>
-    
-    <meta property="og:title" content="Files Box - Upload Your Files Easily" />
-    <meta property="og:description" content="Upload and share files up to 9GB quickly and securely with Files Box." />
-    <meta property="og:image" content="http://files-box.vercel.app/file/c4606.png" />
-    <meta property="og:url" content="https://files-box.vercel.app/" />
-    <meta property="og:type" content="website" />
-    
-    <meta name="description" content="Files Box - Upload and share files up to 20GB quickly and securely." />
-    <meta name="keywords" content="file upload, file sharing, files box, upload files" />
-    <meta name="author" content="@n.int" />
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
 
@@ -94,7 +83,7 @@
             margin-top: 20px;
             padding: 40px;
             text-align: center;
-            color: #fff;
+            color: #007bff;
             cursor: pointer;
             border-radius: 10px;
             transition: background-color 0.3s, color 0.3s;
@@ -184,7 +173,7 @@
         <div class="error-message" id="errorMessage">Invalid file format. Only images, documents, videos, and archives are allowed.</div>
         <form id="uploadForm" enctype="multipart/form-data">
             <input type="file" name="file" id="fileInput" required>
-            <div class="drop-zone" id="dropZone">click to select your file</div>
+            <div class="drop-zone" id="dropZone">click here to select your file</div>
             <button type="submit" id="uploadButton">Upload</button>
         </form>
         <div id="progressBar">
@@ -193,7 +182,6 @@
         <div id="result">
             <div class="link-box" id="linkBox">
                 <p id="fileLink"></p>
-                <button id="openButton" class="direct-link">Open File</button>
             </div>
         </div>
     </div>
@@ -206,8 +194,7 @@
         const result = document.getElementById('result');
         const linkBox = document.getElementById('linkBox');
         const fileLink = document.getElementById('fileLink');
-        const openButton = document.getElementById('openButton');
-
+        
         function updateDropZoneText(fileName) {
             dropZone.textContent = `Selected file: ${fileName}`;
             uploadButton.style.display = 'block';
@@ -252,7 +239,7 @@
             xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable) {
                     const percentComplete = (e.loaded / e.total) * 100;
-                    progressBarFill.style.width = `${percentComplete}%`;
+                    progressBarFill.style.width = `0%`;
                 }
             });
 
