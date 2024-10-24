@@ -72,7 +72,7 @@ app.post('/file', (req, res) => {
       return res.status(400).send('No file uploaded.');
     }
 
-    const uniqueFilename = `${generateRandomString(10)}${path.extname(req.file.originalname)}`;
+    const uniqueFilename = `${generateRandomString(3)}${path.extname(req.file.originalname)}`;
     const query = `INSERT INTO files (filename, filedata) VALUES (?, ?)`;
 
     db.run(query, [uniqueFilename, req.file.buffer], function(err) {
@@ -166,7 +166,7 @@ app.post('/api/file', (req, res) => {
       return res.status(400).json({ error: 'No file uploaded.' });
     }
 
-    const uniqueFilename = `${generateRandomString(10)}${path.extname(req.file.originalname)}`;
+    const uniqueFilename = `${generateRandomString(3)}${path.extname(req.file.originalname)}`;
     const query = `INSERT INTO files (filename, filedata) VALUES (?, ?)`;
 
     db.run(query, [uniqueFilename, req.file.buffer], function(err) {
