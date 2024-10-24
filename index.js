@@ -106,9 +106,6 @@ app.get('/file/:filename', (req, res) => {
 
     res.setHeader('Content-Type', fileType);
     res.setHeader('Content-Disposition', 'inline; filename="' + filename + '"');
-       if (fileType.startsWith('video/')) {
-      res.setHeader('Accept-Ranges', 'bytes');
-    }
     res.send(fileData);
   });
 });
