@@ -9,7 +9,7 @@ const mime = require('mime-types');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-const db = new sqlite3.Database('./files.sqlite', (err) => {
+const db = new sqlite3.Database('./files.db', (err) => {
   if (err) {
     console.error('Failed to connect to SQLite', err);
     process.exit(1);
@@ -89,6 +89,7 @@ app.post('/file', (req, res) => {
 
 app.get('/file/:filename', (req, res) => {
     const filename = req.params.filename;
+
     const query = 'SELECT filepath FROM files WHERE filename = ?';
 
     db.get(query, [filename], (err, row) => {
@@ -109,8 +110,13 @@ app.get('/file/:filename', (req, res) => {
             '.mov': 'video/quicktime',
             '.avi': 'video/x-msvideo',
             '.mkv': 'video/x-matroska',
+            '.jpeg': 'image/jpeg',
+            '.jpg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif'
         };
 
+        // Ensure content type is set correctly
         const contentType = mimeTypes[ext] || 'application/octet-stream';
         const stat = fs.statSync(filePath);
         const fileSize = stat.size;
@@ -130,11 +136,9 @@ app.get('/file/:filename', (req, res) => {
             });
 
             const stream = fs.createReadStream(filePath, { start, end });
-            stream.pipe(res);
-
-            stream.on('error', (streamErr) => {
+            stream.pipe(res).on('error', (streamErr) => {
                 console.error('Error streaming file:', streamErr);
-                res.status(500).send('Error retrieving file.');
+                res.status(500).send('Error streaming the file.');
             });
 
         } else {
@@ -142,16 +146,16 @@ app.get('/file/:filename', (req, res) => {
                 'Content-Length': fileSize,
                 'Content-Type': contentType
             });
-            const stream = fs.createReadStream(filePath);
-            stream.pipe(res);
 
-            stream.on('error', (streamErr) => {
-                console.error('Error streaming file:', streamErr);
-                res.status(500).send('Error retrieving file.');
+            const stream = fs.createReadStream(filePath);
+            stream.pipe(res).on('error', (streamErr) => {
+                console.error('Error reading the file:', streamErr);
+                res.status(500).send('Error retrieving the file.');
             });
         }
     });
 });
+
 app.post('/api/file', (req, res) => {
   upload(req, res, (err) => {
     if (err) {
