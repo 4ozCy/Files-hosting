@@ -88,28 +88,70 @@ app.post('/file', (req, res) => {
 });
 
 app.get('/file/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const query = 'SELECT filedata FROM files WHERE filename = ?';
+    const filename = req.params.filename;
+    const query = 'SELECT filepath FROM files WHERE filename = ?';
 
-  db.get(query, [filename], (err, row) => {
-    if (err) {
-      console.error('Database error:', err);
-      return res.status(500).send('Database error.');
-    }
+    db.get(query, [filename], (err, row) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).send('Database error.');
+        }
 
-    if (!row) {
-      return res.status(404).send('File not found.');
-    }
+        if (!row) {
+            return res.status(404).send('File not found.');
+        }
 
-    const fileData = row.filedata;
-    const fileType = mime.lookup(filename) || 'application/octet-stream';
+        const filePath = row.filepath;
+        const ext = path.extname(filePath).toLowerCase();
 
-    res.setHeader('Content-Type', fileType);
-    res.setHeader('Content-Disposition', 'inline; filename="' + filename + '"');
-    res.send(fileData);
-  });
+        const mimeTypes = {
+            '.mp4': 'video/mp4',
+            '.mov': 'video/quicktime',
+            '.avi': 'video/x-msvideo',
+            '.mkv': 'video/x-matroska',
+        };
+
+        const contentType = mimeTypes[ext] || 'application/octet-stream';
+        const stat = fs.statSync(filePath);
+        const fileSize = stat.size;
+        const range = req.headers.range;
+
+        if (range) {
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const chunkSize = (end - start) + 1;
+
+            res.writeHead(206, {
+                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': chunkSize,
+                'Content-Type': contentType
+            });
+
+            const stream = fs.createReadStream(filePath, { start, end });
+            stream.pipe(res);
+
+            stream.on('error', (streamErr) => {
+                console.error('Error streaming file:', streamErr);
+                res.status(500).send('Error retrieving file.');
+            });
+
+        } else {
+            res.writeHead(200, {
+                'Content-Length': fileSize,
+                'Content-Type': contentType
+            });
+            const stream = fs.createReadStream(filePath);
+            stream.pipe(res);
+
+            stream.on('error', (streamErr) => {
+                console.error('Error streaming file:', streamErr);
+                res.status(500).send('Error retrieving file.');
+            });
+        }
+    });
 });
-
 app.post('/api/file', (req, res) => {
   upload(req, res, (err) => {
     if (err) {
