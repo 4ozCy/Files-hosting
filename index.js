@@ -90,15 +90,16 @@ app.post('/file', (req, res) => {
         return res.status(500).send('Failed to store file metadata.');
       }
 
-      const fileUrl = `${req.protocol}://${req.get('host')}/f/${uniqueFilename}`;
+      const fileUrl = `${req.protocol}://${req.get('host')}/${uniqueFilename}`;
       res.send({ fileUrl });
     });
   });
 });
 
-app.get('/f/:filename', (req, res) => {
+app.get('/:filename', (req, res) => {
   const filename = req.params.filename;
   const query = 'SELECT filedata FROM files WHERE filename = ?';
+
   db.get(query, [filename], (err, row) => {
     if (err) {
       console.error('Database error:', err);
@@ -111,7 +112,6 @@ app.get('/f/:filename', (req, res) => {
 
     const fileBuffer = row.filedata;
     const ext = path.extname(filename).toLowerCase();
-
     const mimeTypes = {
       '.mp4': 'video/mp4',
       '.mov': 'video/quicktime',
@@ -125,14 +125,30 @@ app.get('/f/:filename', (req, res) => {
 
     const contentType = mimeTypes[ext] || 'application/octet-stream';
     const fileSize = fileBuffer.length;
+    const range = req.headers.range;
 
-    res.writeHead(200, {
-      'Content-Type': contentType,
-      'Content-Length': fileSize,
-      'Accept-Ranges': 'bytes'
-    });
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunkSize = (end - start) + 1;
 
-    res.end(fileBuffer);
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType
+      });
+
+      res.end(fileBuffer.slice(start, end + 1));
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType
+      });
+
+      res.end(fileBuffer);
+    }
   });
 });
 
@@ -162,7 +178,7 @@ app.post('/api/file', (req, res) => {
         return res.status(500).json({ error: 'Failed to store file metadata.' });
       }
 
-      const fileUrl = `${req.protocol}://${req.get('host')}/f/${uniqueFilename}`;
+      const fileUrl = `${req.protocol}://${req.get('host')}/${uniqueFilename}`;
       res.json({ fileUrl });
     });
   });
