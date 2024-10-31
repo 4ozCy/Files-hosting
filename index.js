@@ -90,15 +90,15 @@ app.post('/file', (req, res) => {
         return res.status(500).send('Failed to store file metadata.');
       }
 
-      const fileUrl = `${req.protocol}://${req.get('host')}/file/${uniqueFilename}`;
+      const fileUrl = `${req.protocol}://${req.get('host')}/f/${uniqueFilename}`;
       res.send({ fileUrl });
     });
   });
 });
 
-app.get('/file/:filename', (req, res) => {
+app.get('/f/:filename', (req, res) => {
   const filename = req.params.filename;
-  const query = 'SELECT filepath FROM files WHERE filename = ?';
+  const query = 'SELECT filedata FROM files WHERE filename = ?';
   db.get(query, [filename], (err, row) => {
     if (err) {
       console.error('Database error:', err);
@@ -109,8 +109,8 @@ app.get('/file/:filename', (req, res) => {
       return res.status(404).send('File not found.');
     }
 
-    const filePath = row.filepath;
-    const ext = path.extname(filePath).toLowerCase();
+    const fileBuffer = row.filedata;
+    const ext = path.extname(filename).toLowerCase();
 
     const mimeTypes = {
       '.mp4': 'video/mp4',
@@ -124,41 +124,15 @@ app.get('/file/:filename', (req, res) => {
     };
 
     const contentType = mimeTypes[ext] || 'application/octet-stream';
-    const stat = fs.statSync(filePath);
-    const fileSize = stat.size;
-    const range = req.headers.range;
+    const fileSize = fileBuffer.length;
 
-    if (range) {
-      const parts = range.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      const chunkSize = (end - start) + 1;
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Content-Length': fileSize,
+      'Accept-Ranges': 'bytes'
+    });
 
-      res.writeHead(206, {
-        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': chunkSize,
-        'Content-Type': contentType
-      });
-
-      const stream = fs.createReadStream(filePath, { start, end });
-      stream.pipe(res).on('error', (streamErr) => {
-        console.error('Error streaming file:', streamErr);
-        res.status(500).send('Error streaming the file.');
-      });
-
-    } else {
-      res.writeHead(200, {
-        'Content-Length': fileSize,
-        'Content-Type': contentType
-      });
-
-      const stream = fs.createReadStream(filePath);
-      stream.pipe(res).on('error', (streamErr) => {
-        console.error('Error reading the file:', streamErr);
-        res.status(500).send('Error retrieving the file.');
-      });
-    }
+    res.end(fileBuffer);
   });
 });
 
@@ -188,7 +162,7 @@ app.post('/api/file', (req, res) => {
         return res.status(500).json({ error: 'Failed to store file metadata.' });
       }
 
-      const fileUrl = `${req.protocol}://${req.get('host')}/file/${uniqueFilename}`;
+      const fileUrl = `${req.protocol}://${req.get('host')}/f/${uniqueFilename}`;
       res.json({ fileUrl });
     });
   });
