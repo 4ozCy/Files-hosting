@@ -9,7 +9,7 @@ const mime = require('mime-types');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-const db = new sqlite3.Database('./files.db', (err) => {
+const db = new sqlite3.Database('./files.sqlite', (err) => {
   if (err) {
     console.error('Failed to connect to SQLite', err);
     process.exit(1);
@@ -116,7 +116,6 @@ app.get('/file/:filename', (req, res) => {
             '.gif': 'image/gif'
         };
 
-        // Ensure content type is set correctly
         const contentType = mimeTypes[ext] || 'application/octet-stream';
         const stat = fs.statSync(filePath);
         const fileSize = stat.size;
