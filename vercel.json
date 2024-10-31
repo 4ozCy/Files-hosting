@@ -13,7 +13,7 @@
       "dest": "/index.js"
     },
     {
-      "src": "/file/(.*)",
+      "src": "/(.*)",
       "dest": "/index.js"
     },
     {
