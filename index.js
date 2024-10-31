@@ -3,11 +3,17 @@ const express = require('express');
 const multer = require('multer');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const favicon = require('serve-favicon');
 const mime = require('mime-types');
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+const uploadsDir = path.join(__dirname, 'Uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
 
 const db = new sqlite3.Database('./files.sqlite', (err) => {
   if (err) {
@@ -21,7 +27,8 @@ const db = new sqlite3.Database('./files.sqlite', (err) => {
     CREATE TABLE IF NOT EXISTS files (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       filename TEXT NOT NULL,
-      filedata BLOB NOT NULL
+      filedata BLOB NOT NULL,
+      filepath TEXT
     )
   `, (err) => {
     if (err) {
@@ -36,13 +43,12 @@ function generateRandomString(length) {
 }
 
 const upload = multer({
-  limits: { fileSize: 10000 * 1024 * 1024 },
+  limits: { fileSize: 90000 * 1024 * 1024 },
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|mp4|avi|mov|mkv/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-
     if (extname && mimetype) {
       return cb(null, true);
     } else {
@@ -73,9 +79,12 @@ app.post('/file', (req, res) => {
     }
 
     const uniqueFilename = `${generateRandomString(3)}${path.extname(req.file.originalname)}`;
-    const query = `INSERT INTO files (filename, filedata) VALUES (?, ?)`;
+    const filepath = path.join(uploadsDir, uniqueFilename);
 
-    db.run(query, [uniqueFilename, req.file.buffer], function(err) {
+    fs.writeFileSync(filepath, req.file.buffer);
+
+    const query = `INSERT INTO files (filename, filedata, filepath) VALUES (?, ?, ?)`;
+    db.run(query, [uniqueFilename, req.file.buffer, filepath], function(err) {
       if (err) {
         console.error('Failed to store file metadata:', err);
         return res.status(500).send('Failed to store file metadata.');
@@ -88,71 +97,69 @@ app.post('/file', (req, res) => {
 });
 
 app.get('/file/:filename', (req, res) => {
-    const filename = req.params.filename;
+  const filename = req.params.filename;
+  const query = 'SELECT filepath FROM files WHERE filename = ?';
+  db.get(query, [filename], (err, row) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).send('Database error.');
+    }
 
-    const query = 'SELECT filepath FROM files WHERE filename = ?';
+    if (!row) {
+      return res.status(404).send('File not found.');
+    }
 
-    db.get(query, [filename], (err, row) => {
-        if (err) {
-            console.error('Database error:', err);
-            return res.status(500).send('Database error.');
-        }
+    const filePath = row.filepath;
+    const ext = path.extname(filePath).toLowerCase();
 
-        if (!row) {
-            return res.status(404).send('File not found.');
-        }
+    const mimeTypes = {
+      '.mp4': 'video/mp4',
+      '.mov': 'video/quicktime',
+      '.avi': 'video/x-msvideo',
+      '.mkv': 'video/x-matroska',
+      '.jpeg': 'image/jpeg',
+      '.jpg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif'
+    };
 
-        const filePath = row.filepath;
-        const ext = path.extname(filePath).toLowerCase();
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
 
-        const mimeTypes = {
-            '.mp4': 'video/mp4',
-            '.mov': 'video/quicktime',
-            '.avi': 'video/x-msvideo',
-            '.mkv': 'video/x-matroska',
-            '.jpeg': 'image/jpeg',
-            '.jpg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif'
-        };
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunkSize = (end - start) + 1;
 
-        const contentType = mimeTypes[ext] || 'application/octet-stream';
-        const stat = fs.statSync(filePath);
-        const fileSize = stat.size;
-        const range = req.headers.range;
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType
+      });
 
-        if (range) {
-            const parts = range.replace(/bytes=/, "").split("-");
-            const start = parseInt(parts[0], 10);
-            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-            const chunkSize = (end - start) + 1;
+      const stream = fs.createReadStream(filePath, { start, end });
+      stream.pipe(res).on('error', (streamErr) => {
+        console.error('Error streaming file:', streamErr);
+        res.status(500).send('Error streaming the file.');
+      });
 
-            res.writeHead(206, {
-                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': chunkSize,
-                'Content-Type': contentType
-            });
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType
+      });
 
-            const stream = fs.createReadStream(filePath, { start, end });
-            stream.pipe(res).on('error', (streamErr) => {
-                console.error('Error streaming file:', streamErr);
-                res.status(500).send('Error streaming the file.');
-            });
-
-        } else {
-            res.writeHead(200, {
-                'Content-Length': fileSize,
-                'Content-Type': contentType
-            });
-
-            const stream = fs.createReadStream(filePath);
-            stream.pipe(res).on('error', (streamErr) => {
-                console.error('Error reading the file:', streamErr);
-                res.status(500).send('Error retrieving the file.');
-            });
-        }
-    });
+      const stream = fs.createReadStream(filePath);
+      stream.pipe(res).on('error', (streamErr) => {
+        console.error('Error reading the file:', streamErr);
+        res.status(500).send('Error retrieving the file.');
+      });
+    }
+  });
 });
 
 app.post('/api/file', (req, res) => {
@@ -170,9 +177,12 @@ app.post('/api/file', (req, res) => {
     }
 
     const uniqueFilename = `${generateRandomString(3)}${path.extname(req.file.originalname)}`;
-    const query = `INSERT INTO files (filename, filedata) VALUES (?, ?)`;
+    const filepath = path.join(uploadsDir, uniqueFilename);
 
-    db.run(query, [uniqueFilename, req.file.buffer], function(err) {
+    fs.writeFileSync(filepath, req.file.buffer);
+
+    const query = `INSERT INTO files (filename, filedata, filepath) VALUES (?, ?, ?)`;
+    db.run(query, [uniqueFilename, req.file.buffer, filepath], function(err) {
       if (err) {
         console.error('Failed to store file metadata:', err);
         return res.status(500).json({ error: 'Failed to store file metadata.' });
