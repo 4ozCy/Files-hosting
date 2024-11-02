@@ -9,7 +9,6 @@
     <meta property="og:description" content="Upload and share files up to 90GB quickly and securely with Files Box." />
     <meta property="og:url" content="https://filebox.lol" />
     <meta property="og:type" content="website" />
-    <meta property="og:fileurl" content="" id="dynamicFileUrl" />
     
     <meta name="description" content="File Box - Upload and share files up to 90GB quickly and securely." />
     <meta name="keywords" content="file upload, file sharing, files box, upload files" />
@@ -17,6 +16,7 @@
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+
         body {
             font-family: 'Patrick Hand', cursive;
             background-color: #121212;
@@ -30,6 +30,7 @@
             overflow: hidden;
             color: #fff;
         }
+
         .background-animation {
             position: absolute;
             width: 100%;
@@ -41,25 +42,53 @@
             background-size: 400% 400%;
             animation: gradient 15s ease infinite;
         }
+
         @keyframes gradient {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
+
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
         .container {
             max-width: 400px;
             width: 100%;
             padding: 30px;
-            background-color: #1c1c1c;
+            background-image: url('bg.gif');
+            background-size: contain;
             border-radius: 10px;
             text-align: center;
             box-shadow: 10px 10px 15px 0 rgba(0, 0, 0, 0.3);
         }
+
         h1 {
             color: #fff;
             font-size: 28px;
             margin-bottom: 20px;
         }
+
+        .error-message {
+            color: red;
+            font-size: 16px;
+            display: none;
+            margin-top: 10px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
         .drop-zone {
             border: 2px dashed #fff;
             margin-top: 20px;
@@ -70,13 +99,16 @@
             border-radius: 10px;
             transition: background-color 0.3s, color 0.3s;
         }
+
         .drop-zone.dragover {
             background-color: #007bff;
             color: #fff;
         }
+
         button {
             padding: 12px 30px;
             background-color: #007bff;
+            font-family: 'Patrick Hand', cursive;
             color: #fff;
             margin-top: 20px;
             border: none;
@@ -86,9 +118,11 @@
             font-size: 16px;
             transition: background-color 0.3s;
         }
+
         button:hover {
             background-color: #0056b3;
         }
+
         #progressBar {
             width: 100%;
             background-color: #1b1b1b;
@@ -97,12 +131,14 @@
             margin-top: 20px;
             display: none;
         }
+
         #progressBarFill {
             height: 10px;
             width: 0;
             background-color: #007bff;
             transition: width 0.4s ease;
         }
+
         .link-box {
             background-color: #1b1b1b;
             border-radius: 10px;
@@ -113,12 +149,14 @@
             align-items: center;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
         }
+
         .link-box p {
             margin: 0;
             font-size: 18px;
             color: #fff;
             word-break: break-all;
         }
+
         .direct-link {
             margin-top: 10px;
             padding: 10px 20px;
@@ -130,6 +168,7 @@
             font-size: 14px;
             transition: background-color 0.3s;
         }
+
         .direct-link:hover {
             background-color: #138496;
         }
@@ -137,11 +176,14 @@
 </head>
 <body>
     <div class="background-animation"></div>
+    <div class="header">
+    </div>
     <div class="container">
         <h1>Upload Your File</h1>
+        <div class="error-message" id="errorMessage">Invalid file format. Only images, documents, videos, and archives are allowed.</div>
         <form id="uploadForm" enctype="multipart/form-data">
-            <input type="file" name="file" id="fileInput" required style="display: none;">
-            <div class="drop-zone" id="dropZone">Click to select your file</div>
+            <input type="file" name="file" id="fileInput" required>
+            <div class="drop-zone" id="dropZone">click to select your file</div>
             <button type="submit" id="uploadButton">Upload</button>
         </form>
         <div id="progressBar">
@@ -153,106 +195,103 @@
                 <button id="openButton" class="direct-link">Open File</button>
             </div>
         </div>
-        <footer style="margin-top: 20px; color: #ccc; font-size: 14px;">
-            <p>&copy; 2024 filebox. All rights reserved.</p>
+        <footer style="margin-top: 30px; color: #ccc; font-size: 14px;">
+        <p>&copy; 2024 filebox. All rights reserved.</p>
         </footer>
     </div>
     <script>
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const uploadButton = document.getElementById('uploadButton');
-        const progressBar = document.getElementById('progressBar');
-        const progressBarFill = document.getElementById('progressBarFill');
-        const linkBox = document.getElementById('linkBox');
-        const fileLink = document.getElementById('fileLink');
-        const openButton = document.getElementById('openButton');
-        const metaFileUrl = document.getElementById('dynamicFileUrl');
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadButton = document.getElementById('uploadButton');
+    const progressBar = document.getElementById('progressBar');
+    const progressBarFill = document.getElementById('progressBarFill');
+    const result = document.getElementById('result');
+    const linkBox = document.getElementById('linkBox');
+    const fileLink = document.getElementById('fileLink');
+    const openButton = document.getElementById('openButton');
 
-        function updateDropZoneText(fileName) {
-            dropZone.textContent = `Selected file: ${fileName}`;
-            uploadButton.style.display = 'block';
+    function updateDropZoneText(fileName) {
+        dropZone.textContent = `Selected file: ${fileName}`;
+        uploadButton.style.display = 'block';
+    }
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            updateDropZoneText(fileInput.files[0].name);
         }
+    });
 
-        dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            updateDropZoneText(fileInput.files[0].name);
+        }
+    });
 
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
 
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
+        progressBar.style.display = 'block';
+        uploadButton.style.display = 'none';
 
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                updateDropZoneText(fileInput.files[0].name);
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percentComplete = (e.loaded / e.total) * 100;
+                progressBarFill.style.width = `${percentComplete}%`;
             }
         });
 
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length > 0) {
-                updateDropZoneText(fileInput.files[0].name);
-            }
-        });
-
-        document.getElementById('uploadForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            progressBar.style.display = 'block';
-            uploadButton.disabled = true;
-
-            const xhr = new XMLHttpRequest();
-
-            xhr.upload.addEventListener('progress', (e) => {
-                if (e.lengthComputable) {
-                    const percentComplete = (e.loaded / e.total) * 100;
-                    progressBarFill.style.width = `${percentComplete}%`;
-                }
-            });
-
-            xhr.addEventListener('load', () => {
-                if (xhr.status === 200) {
-                    const response = JSON.parse(xhr.responseText);
-                    displayResult(response.fileUrl);
-                    copyToClipboard(response.fileUrl);
-                    metaFileUrl.setAttribute('content', response.fileUrl);
-                } else {
-                    result.textContent = 'Failed to upload file.';
-                }
-                progressBar.style.display = 'none';
-                uploadButton.disabled = false;
-            });
-
-            xhr.addEventListener('error', () => {
+        xhr.addEventListener('load', () => {
+            if (xhr.status === 200) {
+                const response = JSON.parse(xhr.responseText);
+                displayResult(response.fileUrl);
+                copyToClipboard(response.fileUrl);
+            } else {
                 result.textContent = 'Failed to upload file.';
-                progressBar.style.display = 'none';
-                uploadButton.disabled = false;
-            });
-
-            xhr.open('POST', '/file');
-            xhr.send(formData);
+            }
+            progressBar.style.display = 'none';
         });
 
-        function displayResult(fileUrl) {
-            fileLink.textContent = fileUrl;
-            linkBox.style.display = 'flex';
+        xhr.addEventListener('error', () => {
+            result.textContent = 'Failed to upload file.';
+            progressBar.style.display = 'none';
+        });
 
-            openButton.onclick = () => window.open(fileUrl, '_blank');
-        }
+        xhr.open('POST', '/file');
+        xhr.send(formData);
+    });
 
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Link copied to clipboard!');
-            }).catch(err => {
-                console.error('Failed to copy: ', err);
-            });
-        }
-    </script>
+    function displayResult(fileUrl) {
+        fileLink.textContent = fileUrl;
+        linkBox.style.display = 'flex';
+
+        openButton.onclick = () => window.open(fileUrl, '_blank');
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Link copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    }
+</script>
 </body>
 </html>
