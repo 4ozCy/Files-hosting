@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>files box</title>
+    <title>filebox</title>
     
     <meta property="og:title" content="File Box - Upload Your Files Easily" />
     <meta property="og:description" content="Upload and share files up to 90GB quickly and securely with Files Box." />
     <meta property="og:url" content="https://filebox.lol" />
     <meta property="og:type" content="website" />
+    <meta property="og:fileurl" content="" id="dynamicFileUrl" />
     
     <meta name="description" content="File Box - Upload and share files up to 90GB quickly and securely." />
     <meta name="keywords" content="file upload, file sharing, files box, upload files" />
@@ -16,7 +17,6 @@
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
-
         body {
             font-family: 'Patrick Hand', cursive;
             background-color: #121212;
@@ -30,7 +30,6 @@
             overflow: hidden;
             color: #fff;
         }
-
         .background-animation {
             position: absolute;
             width: 100%;
@@ -42,19 +41,11 @@
             background-size: 400% 400%;
             animation: gradient 15s ease infinite;
         }
-
         @keyframes gradient {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-
-        .header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
         .container {
             max-width: 400px;
             width: 100%;
@@ -64,30 +55,11 @@
             text-align: center;
             box-shadow: 10px 10px 15px 0 rgba(0, 0, 0, 0.3);
         }
-
         h1 {
             color: #fff;
             font-size: 28px;
             margin-bottom: 20px;
         }
-
-        .error-message {
-            color: red;
-            font-size: 16px;
-            display: none;
-            margin-top: 10px;
-        }
-
-        form {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        input[type="file"] {
-            display: none;
-        }
-
         .drop-zone {
             border: 2px dashed #fff;
             margin-top: 20px;
@@ -98,16 +70,13 @@
             border-radius: 10px;
             transition: background-color 0.3s, color 0.3s;
         }
-
         .drop-zone.dragover {
             background-color: #007bff;
             color: #fff;
         }
-
         button {
             padding: 12px 30px;
             background-color: #007bff;
-            font-family: 'Patrick Hand', cursive;
             color: #fff;
             margin-top: 20px;
             border: none;
@@ -117,11 +86,9 @@
             font-size: 16px;
             transition: background-color 0.3s;
         }
-
         button:hover {
             background-color: #0056b3;
         }
-
         #progressBar {
             width: 100%;
             background-color: #1b1b1b;
@@ -130,14 +97,12 @@
             margin-top: 20px;
             display: none;
         }
-
         #progressBarFill {
             height: 10px;
             width: 0;
             background-color: #007bff;
             transition: width 0.4s ease;
         }
-
         .link-box {
             background-color: #1b1b1b;
             border-radius: 10px;
@@ -148,14 +113,12 @@
             align-items: center;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
         }
-
         .link-box p {
             margin: 0;
             font-size: 18px;
             color: #fff;
             word-break: break-all;
         }
-
         .direct-link {
             margin-top: 10px;
             padding: 10px 20px;
@@ -167,7 +130,6 @@
             font-size: 14px;
             transition: background-color 0.3s;
         }
-
         .direct-link:hover {
             background-color: #138496;
         }
@@ -175,14 +137,11 @@
 </head>
 <body>
     <div class="background-animation"></div>
-    <div class="header">
-    </div>
     <div class="container">
         <h1>Upload Your File</h1>
-        <div class="error-message" id="errorMessage">Invalid file format. Only images, documents, videos, and archives are allowed.</div>
         <form id="uploadForm" enctype="multipart/form-data">
-            <input type="file" name="file" id="fileInput" required>
-            <div class="drop-zone" id="dropZone">click to select your file</div>
+            <input type="file" name="file" id="fileInput" required style="display: none;">
+            <div class="drop-zone" id="dropZone">Click to select your file</div>
             <button type="submit" id="uploadButton">Upload</button>
         </form>
         <div id="progressBar">
@@ -195,7 +154,7 @@
             </div>
         </div>
         <footer style="margin-top: 20px; color: #ccc; font-size: 14px;">
-        <p>&copy; 2024 File Box. All rights reserved.</p>
+            <p>&copy; 2024 filebox. All rights reserved.</p>
         </footer>
     </div>
     <script>
@@ -204,10 +163,10 @@
         const uploadButton = document.getElementById('uploadButton');
         const progressBar = document.getElementById('progressBar');
         const progressBarFill = document.getElementById('progressBarFill');
-        const result = document.getElementById('result');
         const linkBox = document.getElementById('linkBox');
         const fileLink = document.getElementById('fileLink');
         const openButton = document.getElementById('openButton');
+        const metaFileUrl = document.getElementById('dynamicFileUrl');
 
         function updateDropZoneText(fileName) {
             dropZone.textContent = `Selected file: ${fileName}`;
@@ -262,6 +221,7 @@
                     const response = JSON.parse(xhr.responseText);
                     displayResult(response.fileUrl);
                     copyToClipboard(response.fileUrl);
+                    metaFileUrl.setAttribute('content', response.fileUrl);
                 } else {
                     result.textContent = 'Failed to upload file.';
                 }
