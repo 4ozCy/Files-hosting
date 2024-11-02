@@ -90,7 +90,7 @@ app.post('/file', (req, res) => {
         return res.status(500).send('Failed to store file metadata.');
       }
 
-      const fileUrl = `${req.protocol}://${req.get('host')}/${uniqueFilename}`;
+      const fileUrl = `https://${req.get('host')}/${uniqueFilename}`;
       res.send({ fileUrl });
     });
   });
@@ -178,7 +178,7 @@ app.post('/api/file', (req, res) => {
         return res.status(500).json({ error: 'Failed to store file metadata.' });
       }
 
-      const fileUrl = `${req.protocol}://${req.get('host')}/${uniqueFilename}`;
+      const fileUrl = `https://${req.get('host')}/${uniqueFilename}`;
       res.json({ fileUrl });
     });
   });
