@@ -78,7 +78,7 @@ app.post('/file', (req, res) => {
       return res.status(400).send('No file uploaded.');
     }
 
-    const uniqueFilename = `${generateRandomString(3)}${path.extname(req.file.originalname)}`;
+    const uniqueFilename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
     const filepath = path.join(uploadsDir, uniqueFilename);
 
     fs.writeFileSync(filepath, req.file.buffer);
@@ -166,7 +166,7 @@ app.post('/api/file', (req, res) => {
       return res.status(400).json({ error: 'No file uploaded.' });
     }
 
-    const uniqueFilename = `${generateRandomString(3)}${path.extname(req.file.originalname)}`;
+    const uniqueFilename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
     const filepath = path.join(uploadsDir, uniqueFilename);
 
     fs.writeFileSync(filepath, req.file.buffer);
