@@ -17,7 +17,7 @@
       "dest": "/index.js"
     },
     {
-      "src": "/(.*)",
+      "src": "/file",
       "dest": "/index.js"
     }
   ]
