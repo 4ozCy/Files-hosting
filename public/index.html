@@ -195,13 +195,7 @@
         <p>&copy; 2024 filebox. All rights reserved.</p>
         </footer>
     </div>
-    <script>
-    document.getElementById('restartIcon').addEventListener('click', () => {
-    document.getElementById('uploadForm').reset();
-    document.getElementById('dropZone').textContent = 'click to select your file';
-    document.getElementById('uploadButton').style.display = 'none';
-    document.getElementById('progressBarFill').style.width = '0';
-});
+    <script> 
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const uploadButton = document.getElementById('uploadButton');
@@ -211,6 +205,9 @@
     const linkBox = document.getElementById('linkBox');
     const fileLink = document.getElementById('fileLink');
     const openButton = document.getElementById('openButton');
+    document.getElementById('restartIcon').addEventListener('click', () => {
+    location.reload();
+});
 
     function updateDropZoneText(fileName) {
         dropZone.textContent = `Selected file: ${fileName}`;
