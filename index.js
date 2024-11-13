@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const favicon = require('serve-favicon');
 const mime = require('mime-types');
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
 const uploadsDir = path.join(__dirname, 'Uploads');
 if (!fs.existsSync(uploadsDir)) {
