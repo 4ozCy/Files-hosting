@@ -53,6 +53,7 @@
     border-radius: 10px;
     text-align: center;
     color: white;
+    index-z: 1;
 }
 
         h1 {
@@ -185,8 +186,10 @@
     <div class="container">
         <h1>Upload Your File</h1>
         <div class="error-message" id="errorMessage">Invalid file format. Only images, documents, videos, and archives are allowed.</div>
-        <form id="uploadForm" enctype="multipart/form-data">
-            <input type="file" name="file" id="fileInput" required>
+<form>
+    <label for="fileInput" class="drop-zone">Click to browse or drag files here</label>
+    <input type="file" id="fileInput" name="fileInput">
+</form>
             <div class="drop-zone" id="dropZone">click to select your file</div>
             <button type="submit" id="uploadButton">Upload</button>
             <span class="restart-icon" id="restartIcon">&#x21BB;</span>
