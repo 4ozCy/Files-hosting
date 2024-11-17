@@ -5,21 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>filebox</title>
     
-    <meta property="og:title" content="File Box - Upload Your Files Easily" />
-    <meta property="og:description" content="Upload and share files up to 90GB quickly and securely with Files Box." />
+    <meta property="og:title" content="File Box - Upload Your File Easily" />
+    <meta property="og:description" content="Upload and share file quickly and securely with Files Box." />
     <meta property="og:url" content="https://filebox.lol" />
     <meta property="og:type" content="website" />
     
-    <meta name="description" content="File Box - Upload and share files up to 90GB quickly and securely." />
-    <meta name="keywords" content="file upload, file sharing, files box, upload files" />
+    <meta name="description" content="File Box - Upload and share file quickly and securely." />
+    <meta name="keywords" content="file upload, file sharing, files box, upload file, file hosting" />
     <meta name="author" content="@n.int" />
-    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
 
         body {
             font-family: 'Patrick Hand', cursive;
+            background: url('/assets/bg.gif');
+            background-size: cover;
             background-color: #000000;
             padding: 20px;
             height: 100vh;
@@ -31,36 +32,27 @@
             overflow: hidden;
             color: #000000;
         }
-        
-        #particles-js {
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            index-z: 3;
-        }
 
         .header {
             display: flex;
             align-items: center;
             margin-bottom: 10px;
-            color: #f8fafc;
         }
 
         .container {
     max-width: 400px;
     width: 100%;
     padding: 30px;
-    background-color: rgba(30, 30, 30, 0.5);
+    background-color: rgba(30, 30, 30, 0.6);
     border-radius: 10px;
     text-align: center;
     color: white;
 }
 
         h1 {
-            color: #f8fafc;
+            color: #fff;
             font-size: 28px;
             margin-bottom: 20px;
-            
         }
 
         .error-message {
@@ -78,7 +70,6 @@
 
         input[type="file"] {
             display: none;
-            index-z: 2;
         }
 
         .drop-zone {
@@ -109,7 +100,6 @@
             display: none;
             font-size: 16px;
             transition: background-color 0.3s;
-            index-z: 2;
         }
 
         button:hover {
@@ -117,7 +107,7 @@
         }
         
         .restart-icon {
-          position: absolute;
+            position: absolute;
             top: 10px;
             right: 10px;
             font-size: 30px;
@@ -182,18 +172,15 @@
     </style>
 </head>
 <body>
-  
-  <div id="particles-js"></div>
       
     <div class="container">
         <h1>Upload Your File</h1>
+        <span class="restart-icon" id="restartIcon">&#x21BB;</span>
         <div class="error-message" id="errorMessage">Invalid file format. Only images, documents, videos, and archives are allowed.</div>
-<form>
-    <label for="fileInput" class="drop-zone">Click to browse or drag files here</label>
-    <input type="file" id="fileInput" name="fileInput">
-</form>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" name="file" id="fileInput" required>
+            <div class="drop-zone" id="dropZone">click to select your file</div>
             <button type="submit" id="uploadButton">Upload</button>
-            <span class="restart-icon" id="restartIcon">&#x21BB;</span>
         </form>
         <div id="progressBar">
             <div id="progressBarFill"></div>
@@ -304,41 +291,6 @@
             console.error('Failed to copy: ', err);
         });
     }
-    
-    particlesJS('particles-js', {
-            particles: {
-                number: { value: 80, density: { enable: true, value_area: 800 } },
-                color: { value: '#6366f1' },
-                shape: { type: 'circle' },
-                opacity: { value: 0.5, random: false },
-                size: { value: 3, random: true },
-                line_linked: {
-                    enable: true,
-                    distance: 150,
-                    color: '#6366f1',
-                    opacity: 0.2,
-                    width: 1
-                },
-                move: {
-                    enable: true,
-                    speed: 2,
-                    direction: 'none',
-                    random: true,
-                    straight: false,
-                    out_mode: 'out',
-                    bounce: true
-                }
-            },
-            interactivity: {
-                detect_on: 'canvas',
-                events: {
-                    onhover: { enable: false, mode: 'repulse' },
-                    onclick: { enable: false, mode: 'push' },
-                    resize: true
-                }
-            },
-            retina_detect: true
-        });
 </script>
 </body>
 </html>
