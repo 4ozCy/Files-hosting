@@ -4,7 +4,8 @@
   "description": "made by; @n.int",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+  "start": "node index.js",
+  "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "@n.int",
