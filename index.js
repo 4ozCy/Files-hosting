@@ -16,7 +16,10 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const db = new sqlite3.Database('./files.sqlite', (err) => {
-  if (err) process.exit(1);
+  if (err) {
+    console.error('Database connection error:', err.message);
+    return;
+  }
   db.run(`
     CREATE TABLE IF NOT EXISTS files (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,7 +60,11 @@ app.post('/file', (req, res) => {
     if (!req.file) return res.status(400).send('No file uploaded.');
     const uniqueFilename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
     const filepath = path.join(uploadsDir, uniqueFilename);
-    fs.writeFileSync(filepath, req.file.buffer);
+    try {
+      fs.writeFileSync(filepath, req.file.buffer);
+    } catch (writeError) {
+      return res.status(500).send('Failed to save file.');
+    }
     const query = `INSERT INTO files (filename, filedata, filepath) VALUES (?, ?, ?)`;
     db.run(query, [uniqueFilename, req.file.buffer, filepath], function(err) {
       if (err) return res.status(500).send('Failed to store file metadata.');
@@ -72,20 +79,10 @@ app.get('/:filename', (req, res) => {
   const query = 'SELECT filedata FROM files WHERE filename = ?';
   db.get(query, [filename], (err, row) => {
     if (err) return res.status(500).send('Database error.');
-    if (!row) return res.status(404).send('File not found.');
+    if (!row) return res.status(404).json({ error: 'File not found.' });
     const fileBuffer = row.filedata;
     const ext = path.extname(filename).toLowerCase();
-    const mimeTypes = {
-      '.mp4': 'video/mp4',
-      '.mov': 'video/quicktime',
-      '.avi': 'video/x-msvideo',
-      '.mkv': 'video/x-matroska',
-      '.jpeg': 'image/jpeg',
-      '.jpg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif'
-    };
-    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    const contentType = mime.lookup(ext) || 'application/octet-stream';
     const fileSize = fileBuffer.length;
     const range = req.headers.range;
     if (range) {
@@ -116,7 +113,11 @@ setInterval(() => {
   db.all(`SELECT * FROM files WHERE upload_date < ?`, [expiryDate.toISOString()], (err, rows) => {
     if (err) return;
     rows.forEach((row) => {
-      fs.unlink(row.filepath, () => {});
+      if (fs.existsSync(row.filepath)) {
+        fs.unlink(row.filepath, (unlinkErr) => {
+          if (unlinkErr) console.error('Failed to delete file:', unlinkErr);
+        });
+      }
       db.run(`DELETE FROM files WHERE id = ?`, row.id);
     });
   });
