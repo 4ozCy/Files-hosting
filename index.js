@@ -3,32 +3,32 @@ const express = require('express');
 const multer = require('multer');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs').promises;
 const crypto = require('crypto');
 const favicon = require('serve-favicon');
 const mime = require('mime-types');
 const app = express();
 const PORT = process.env.PORT || 3000;
+const FILE_SIZE_LIMIT = process.env.FILE_SIZE_LIMIT || 2000 * 1024 * 1024;
+const EXPIRY_DAYS = process.env.EXPIRY_DAYS || 30;
 
 const uploadsDir = path.join(__dirname, 'Uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
+fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
 
 const db = new sqlite3.Database('./files.sqlite', (err) => {
   if (err) {
     console.error('Database connection error:', err.message);
-    return;
+  } else {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS files (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT NOT NULL,
+        filedata BLOB NOT NULL,
+        filepath TEXT,
+        upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
   }
-  db.run(`
-    CREATE TABLE IF NOT EXISTS files (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      filename TEXT NOT NULL,
-      filedata BLOB NOT NULL,
-      filepath TEXT,
-      upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
 });
 
 function generateRandomString(length) {
@@ -36,7 +36,7 @@ function generateRandomString(length) {
 }
 
 const upload = multer({
-  limits: { fileSize: 90000 * 1024 * 1024 },
+  limits: { fileSize: FILE_SIZE_LIMIT },
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|mp4|avi|mov|mkv/;
@@ -55,22 +55,23 @@ app.get('/', (req, res) => {
 });
 
 app.post('/file', (req, res) => {
-  upload(req, res, (err) => {
+  upload(req, res, async (err) => {
     if (err) return res.status(400).send(err.message);
     if (!req.file) return res.status(400).send('No file uploaded.');
     const uniqueFilename = `${generateRandomString(5)}${path.extname(req.file.originalname)}`;
     const filepath = path.join(uploadsDir, uniqueFilename);
+
     try {
-      fs.writeFileSync(filepath, req.file.buffer);
+      await fs.writeFile(filepath, req.file.buffer);
+      const query = `INSERT INTO files (filename, filedata, filepath) VALUES (?, ?, ?)`;
+      db.run(query, [uniqueFilename, req.file.buffer, filepath], function(err) {
+        if (err) return res.status(500).send('Failed to store file metadata.');
+        const fileUrl = `https://${req.get('host')}/${uniqueFilename}`;
+        res.send({ fileUrl });
+      });
     } catch (writeError) {
-      return res.status(500).send('Failed to save file.');
+      res.status(500).send('Failed to save file.');
     }
-    const query = `INSERT INTO files (filename, filedata, filepath) VALUES (?, ?, ?)`;
-    db.run(query, [uniqueFilename, req.file.buffer, filepath], function(err) {
-      if (err) return res.status(500).send('Failed to store file metadata.');
-      const fileUrl = `https://${req.get('host')}/${uniqueFilename}`;
-      res.send({ fileUrl });
-    });
   });
 });
 
@@ -85,6 +86,7 @@ app.get('/:filename', (req, res) => {
     const contentType = mime.lookup(ext) || 'application/octet-stream';
     const fileSize = fileBuffer.length;
     const range = req.headers.range;
+
     if (range) {
       const parts = range.replace(/bytes=/, "").split("-");
       const start = parseInt(parts[0], 10);
@@ -108,18 +110,17 @@ app.get('/:filename', (req, res) => {
 });
 
 setInterval(() => {
-  const expiryDays = 30;
-  const expiryDate = new Date(Date.now() - expiryDays * 24 * 60 * 60 * 1000);
-  db.all(`SELECT * FROM files WHERE upload_date < ?`, [expiryDate.toISOString()], (err, rows) => {
+  const expiryDate = new Date(Date.now() - EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  db.all(`SELECT * FROM files WHERE upload_date < ?`, [expiryDate], async (err, rows) => {
     if (err) return;
-    rows.forEach((row) => {
-      if (fs.existsSync(row.filepath)) {
-        fs.unlink(row.filepath, (unlinkErr) => {
-          if (unlinkErr) console.error('Failed to delete file:', unlinkErr);
-        });
+    for (const row of rows) {
+      try {
+        await fs.unlink(row.filepath);
+        db.run(`DELETE FROM files WHERE id = ?`, row.id);
+      } catch (unlinkErr) {
+        console.error('Failed to delete file:', unlinkErr);
       }
-      db.run(`DELETE FROM files WHERE id = ?`, row.id);
-    });
+    }
   });
 }, 24 * 60 * 60 * 1000);
 
